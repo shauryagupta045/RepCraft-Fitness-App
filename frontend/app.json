@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "RepCraft",
+    "slug": "repcraft2",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1E2340"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.repcraft.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1E2340"
+      },
+      "package": "com.repcraft.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "jsEngine": "jsc"
+    },
+    "plugins": ["expo-font"],
+    "newArchEnabled": true
+  }
+}
