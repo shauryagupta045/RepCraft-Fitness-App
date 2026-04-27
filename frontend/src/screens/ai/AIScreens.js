@@ -9,7 +9,7 @@ import {
   FlatList, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/authStore';
 import { useAIStore } from '../../store/aiStore';
@@ -22,149 +22,147 @@ import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 /* ─── Feature card data ──────────────────────────────────────────────────────── */
 const AI_FEATURES = [
   {
-    icon: 'calendar-outline',
-    title: 'Workout Planner',
-    subtitle: 'Build a custom weekly plan',
-    color: COLORS.primary,
-    bg: '#FFF0EE',
+    icon: 'dumbbell',
+    library: 'MaterialCommunityIcons',
+    title: 'Build\nPlan',
+    color: '#FF6B6B',
+    bg: '#FFF',
     screen: 'WorkoutPlanner',
   },
   {
-    icon: 'nutrition-outline',
-    title: 'Diet Planner',
-    subtitle: 'Calculate your macros',
-    color: COLORS.secondary,
-    bg: '#EDF9F8',
+    icon: 'silverware-fork-knife',
+    library: 'MaterialCommunityIcons',
+    title: 'Plan My\nDiet',
+    color: '#4ECDC4',
+    bg: '#FFF',
     screen: 'DietPlanner',
   },
   {
-    icon: 'bar-chart-outline',
-    title: 'Progress Analyzer',
-    subtitle: 'Insights from your data',
-    color: '#6C8FC7',
-    bg: '#EEF2FA',
+    icon: 'chart-line-variant',
+    library: 'MaterialCommunityIcons',
+    title: 'My\nProgress',
+    color: '#45B7D1',
+    bg: '#FFF',
     screen: 'ProgressAnalyzer',
   },
   {
-    icon: 'refresh-outline',
-    title: 'Routine Optimizer',
-    subtitle: 'Science-based improvements',
-    color: '#F5A623',
-    bg: '#FFF8EE',
+    icon: 'speedometer',
+    library: 'MaterialCommunityIcons',
+    title: 'Optimise\nmy progress',
+    color: '#FF8ED4',
+    bg: '#FFF',
     screen: 'RoutineOptimizer',
   },
 ];
 
 /* ─────────────────────────────────────────────────────────────────────────────
    AI HOME SCREEN
-   Stitch: light #F0F2F5 bg, greeting header, feature 2x2 grid, chat button
-─────────────────────────────────────────────────────────────────────────────── */
+   Updated Redesign: Matching User Reference Image
+   Dark Banner, Metrics Row, Featured Card, 2x2 Grid
+ ─────────────────────────────────────────────────────────────────────────────── */
 export function AIHomeScreen({ navigation }) {
   const { user } = useAuthStore();
   const { todayMetrics } = useMetricsStore();
   const firstName = user?.name?.split(' ')[0] || 'Alex';
-  const hour = new Date().getHours();
-  const greetLabel = hour < 12 ? 'GOOD MORNING' : hour < 17 ? 'GOOD AFTERNOON' : 'GOOD EVENING';
 
-  // Compute a quick insight from metrics
-  const sleepOk  = todayMetrics.sleep >= 7;
-  const stepsOk  = todayMetrics.steps >= 8000;
-  const insightTxt = sleepOk && stepsOk
-    ? "You're on track today! Sleep and steps both look great."
-    : !sleepOk
-    ? `Sleep was ${todayMetrics.sleep}h last night — aim for 7–8h for optimal recovery.`
-    : `Only ${todayMetrics.steps.toLocaleString()} steps so far — push for 10,000!`;
+  // Compute a quick insight from metrics (simulated logic for the quote)
+  const insightTxt = "You've trained 3 days straight — consider a rest day tomorrow for muscle recovery.";
 
   return (
     <SafeAreaView style={aS.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={aS.scroll}>
+      {/* ── Header Banner ── */}
+      <View style={aS.headerBanner}>
+        <Text style={aS.welcomeBack}>WELCOME BACK</Text>
+        <Text style={aS.bannerTitle}>Hey {firstName} 👋</Text>
+        <Text style={aS.bannerSub}>Your AI coach is ready</Text>
 
-        {/* ── Header ── */}
-        <View style={aS.header}>
-          <View>
-            <Text style={aS.greetSmall}>{greetLabel}</Text>
-            <Text style={aS.greetLarge}>AI Coach</Text>
+        {/* ── Metrics Row ── */}
+        <View style={aS.metricsRow}>
+          <View style={aS.metricCard}>
+            <Text style={aS.metricLabel}>STREAK</Text>
+            <Text style={aS.metricValue}>{user?.streak || 5} days</Text>
           </View>
-          <View style={aS.aiChip}>
-            <Ionicons name="hardware-chip-outline" size={14} color={COLORS.primary} />
-            <Text style={aS.aiChipText}>Claude AI</Text>
+          <View style={aS.metricCard}>
+            <Text style={aS.metricLabel}>WORKOUTS</Text>
+            <Text style={aS.metricValue}>3</Text>
+          </View>
+          <View style={aS.metricCard}>
+            <Text style={aS.metricLabel}>RECOVERY</Text>
+            <Text style={[aS.metricValue, { color: '#4ECDC4' }]}>Good</Text>
           </View>
         </View>
+      </View>
 
-        {/* ── Insight banner ── */}
-        <View style={[aS.insightCard, SHADOWS.card]}>
-          <View style={aS.insightLeft}>
-            <View style={aS.insightIcon}>
-              <Ionicons name="bulb-outline" size={20} color="#F5A623" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={aS.scroll}>
+        
+        {/* ── Featured Card: Form Tracker ── */}
+        <TouchableOpacity 
+          style={aS.featuredCard} 
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('FormTracker')}
+        >
+          <View style={aS.featuredLeft}>
+            <View style={aS.featuredIconWrap}>
+              <MaterialCommunityIcons name="video" size={24} color="#B03E32" />
+            </View>
+            <View style={aS.featuredInfo}>
+              <View style={aS.newBadgeRow}>
+                <View style={aS.newBadge}>
+                  <Text style={aS.newBadgeText}>NEW</Text>
+                </View>
+              </View>
+              <Text style={aS.featuredTitle}>Form Tracker</Text>
+              <Text style={aS.featuredSub}>AI watches your reps via camera</Text>
             </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={aS.insightLabel}>TODAY'S INSIGHT</Text>
-            <Text style={aS.insightText}>{insightTxt}</Text>
+          <View style={aS.featuredArrow}>
+            <Ionicons name="chevron-forward" size={20} color="#9BA3AF" />
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* ── Feature grid 2x2 ── */}
-        <Text style={aS.sectionTitle}>What can I help with?</Text>
         <View style={aS.grid}>
           {AI_FEATURES.map((f, i) => (
             <TouchableOpacity
               key={i}
-              style={[aS.featureCard, { backgroundColor: f.bg }, SHADOWS.card]}
+              style={[aS.featureCard, SHADOWS.card]}
               onPress={() => navigation.navigate(f.screen)}
               activeOpacity={0.85}
             >
-              <View style={[aS.featureIcon, { backgroundColor: f.color + '20' }]}>
-                <Ionicons name={f.icon} size={24} color={f.color} />
+              <View style={[aS.featureIconWrap, { backgroundColor: f.color + '10' }]}>
+                {f.library === 'MaterialCommunityIcons' ? (
+                   <MaterialCommunityIcons name={f.icon} size={24} color={f.color} />
+                ) : (
+                   <Ionicons name={f.icon} size={24} color={f.color} />
+                )}
               </View>
               <Text style={aS.featureTitle}>{f.title}</Text>
-              <Text style={aS.featureSub}>{f.subtitle}</Text>
-              <View style={[aS.featureArrow, { backgroundColor: f.color + '15' }]}>
-                <Ionicons name="arrow-forward" size={12} color={f.color} />
-              </View>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* ── Recent activity ── */}
-        <Text style={aS.sectionTitle}>Quick Actions</Text>
-        <View style={aS.quickRow}>
-          {[
-            { icon: 'chatbubble-ellipses-outline', label: 'Ask a question', action: () => navigation.navigate('AIChat') },
-            { icon: 'trending-up-outline', label: 'View progress', action: () => navigation.navigate('ProgressAnalyzer') },
-          ].map((item, i) => (
-            <TouchableOpacity
-              key={i}
-              style={[aS.quickCard, SHADOWS.card]}
-              onPress={item.action}
-              activeOpacity={0.85}
-            >
-              <Ionicons name={item.icon} size={22} color={COLORS.primary} />
-              <Text style={aS.quickLabel}>{item.label}</Text>
-            </TouchableOpacity>
-          ))}
+        {/* ── Insight card ── */}
+        <View style={aS.insightCard}>
+          <View style={aS.insightAccent} />
+          <View style={aS.insightContent}>
+            <View style={aS.insightHeader}>
+              <View style={aS.insightDot} />
+              <Text style={aS.insightTagText}>TODAY'S AI INSIGHT</Text>
+            </View>
+            <Text style={aS.insightBody}>
+              "{insightTxt}"
+            </Text>
+          </View>
         </View>
 
         {/* ── Chat CTA ── */}
         <TouchableOpacity
-          style={aS.chatCta}
+          style={aS.chatBtn}
           onPress={() => navigation.navigate('AIChat')}
-          activeOpacity={0.88}
+          activeOpacity={0.9}
         >
-          <LinearGradient
-            colors={[COLORS.primary, '#D96055']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={aS.chatCtaGrad}
-          >
-            <View style={aS.chatCtaLeft}>
-              <Ionicons name="chatbubble-ellipses-outline" size={22} color="#fff" />
-              <View style={{ marginLeft: SPACING.md }}>
-                <Text style={aS.chatCtaTitle}>Chat with AI Coach</Text>
-                <Text style={aS.chatCtaSub}>Ask anything about fitness</Text>
-              </View>
-            </View>
-            <Ionicons name="arrow-forward" size={18} color="rgba(255,255,255,0.8)" />
-          </LinearGradient>
+          <MaterialCommunityIcons name="chat-processing" size={24} color="#fff" />
+          <Text style={aS.chatBtnText}>Chat with AI Coach</Text>
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />
@@ -174,61 +172,140 @@ export function AIHomeScreen({ navigation }) {
 }
 
 const aS = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: SPACING.sm, marginBottom: SPACING.lg,
+  container: { flex: 1, backgroundColor: '#F8F9FB' },
+  
+  headerBanner: {
+    backgroundColor: '#1A2138',
+    paddingTop: 20,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
-  greetSmall: { fontFamily: FONTS.medium, fontSize: 10, color: COLORS.textMuted, letterSpacing: 1.2 },
-  greetLarge: { fontFamily: FONTS.black, fontSize: 26, color: COLORS.textDark, letterSpacing: -0.5 },
-  aiChip: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.primary + '15',
-    borderRadius: RADIUS.pill, paddingHorizontal: 12, paddingVertical: 6,
+  welcomeBack: { 
+    fontFamily: FONTS.bold, 
+    fontSize: 12, 
+    color: '#9BA3AF', 
+    letterSpacing: 1,
+    marginBottom: 4 
   },
-  aiChipText: { fontFamily: FONTS.bold, fontSize: 12, color: COLORS.primary, marginLeft: 5 },
-  insightCard: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.card,
-    padding: SPACING.lg, marginBottom: SPACING.xl,
-    borderLeftWidth: 4, borderLeftColor: '#F5A623',
+  bannerTitle: { 
+    fontFamily: FONTS.black, 
+    fontSize: 32, 
+    color: '#fff', 
+    marginBottom: 4 
   },
-  insightLeft: { marginRight: SPACING.md, marginTop: 2 },
-  insightIcon: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: '#FFF8EE', alignItems: 'center', justifyContent: 'center',
+  bannerSub: { 
+    fontFamily: FONTS.bold, 
+    fontSize: 18, 
+    color: '#E8705E' 
   },
-  insightLabel: { fontFamily: FONTS.bold, fontSize: 10, color: '#F5A623', letterSpacing: 1, marginBottom: 4 },
-  insightText: { fontFamily: FONTS.regular, fontSize: 13, color: COLORS.textMuted, lineHeight: 20 },
-  sectionTitle: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.textDark, marginBottom: SPACING.md },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.xl },
-  featureCard: {
-    width: '48%', borderRadius: RADIUS.card, padding: SPACING.lg,
-    marginRight: '4%', marginBottom: SPACING.md, position: 'relative',
+
+  metricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
   },
-  featureIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.sm },
-  featureTitle: { fontFamily: FONTS.bold, fontSize: 14, color: COLORS.textDark, marginBottom: 3 },
-  featureSub: { fontFamily: FONTS.regular, fontSize: 11, color: COLORS.textMuted, lineHeight: 16 },
-  featureArrow: {
-    position: 'absolute', top: SPACING.md, right: SPACING.md,
-    width: 24, height: 24, borderRadius: 12,
+  metricCard: {
+    width: '31%',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 12,
+  },
+  metricLabel: {
+    fontFamily: FONTS.bold,
+    fontSize: 10,
+    color: '#9BA3AF',
+    marginBottom: 4,
+  },
+  metricValue: {
+    fontFamily: FONTS.black,
+    fontSize: 16,
+    color: '#fff',
+  },
+
+  scroll: { paddingHorizontal: 20, paddingTop: 20 },
+
+  featuredCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    ...SHADOWS.card,
+  },
+  featuredLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  featuredIconWrap: {
+    width: 50, height: 50, borderRadius: 16,
+    backgroundColor: '#FDECEA',
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 16,
+  },
+  featuredInfo: { flex: 1 },
+  newBadgeRow: { marginBottom: 4 },
+  newBadge: {
+    backgroundColor: '#B03E32',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  newBadgeText: { fontFamily: FONTS.bold, fontSize: 10, color: '#fff' },
+  featuredTitle: { fontFamily: FONTS.black, fontSize: 18, color: '#1A2138' },
+  featuredSub: { fontFamily: FONTS.medium, fontSize: 12, color: '#9BA3AF', marginTop: 2 },
+  featuredArrow: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#F3F4F6',
     alignItems: 'center', justifyContent: 'center',
   },
-  quickRow: { flexDirection: 'row', marginBottom: SPACING.xl },
-  quickCard: {
-    flex: 1, backgroundColor: COLORS.surface, borderRadius: RADIUS.card,
-    padding: SPACING.lg, alignItems: 'center', marginRight: SPACING.md,
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  featureCard: {
+    width: '48%', backgroundColor: '#fff', borderRadius: 24,
+    padding: 20, marginBottom: 16, alignItems: 'flex-start',
+    height: 140, justifyContent: 'space-between',
   },
-  quickLabel: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.textDark, marginTop: 8, textAlign: 'center' },
-  chatCta: { borderRadius: RADIUS.card, overflow: 'hidden', marginBottom: SPACING.md },
-  chatCtaGrad: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: SPACING.lg,
+  featureIconWrap: {
+    width: 44, height: 44, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
   },
-  chatCtaLeft: { flexDirection: 'row', alignItems: 'center' },
-  chatCtaTitle: { fontFamily: FONTS.bold, fontSize: 15, color: '#fff' },
-  chatCtaSub: { fontFamily: FONTS.regular, fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  featureTitle: { fontFamily: FONTS.black, fontSize: 16, color: '#1A2138', lineHeight: 20 },
+
+  insightCard: { 
+    backgroundColor: '#F8F9FA', 
+    borderRadius: 20, 
+    flexDirection: 'row',
+    overflow: 'hidden',
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: '#F1F2F4',
+  },
+  insightAccent: { width: 4, backgroundColor: '#B03E32' },
+  insightContent: { padding: 20, flex: 1 },
+  insightHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  insightDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#B03E32', marginRight: 8 },
+  insightTagText: { fontFamily: FONTS.bold, fontSize: 11, color: '#B03E32', letterSpacing: 0.5 },
+  insightBody: { 
+    fontFamily: FONTS.medium, 
+    fontSize: 14, 
+    color: '#4A5568', 
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+
+  chatBtn: { 
+    marginTop: 20, 
+    backgroundColor: '#B03E32',
+    borderRadius: RADIUS.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    ...SHADOWS.primary,
+  },
+  chatBtnText: { fontFamily: FONTS.bold, fontSize: 18, color: '#fff', marginLeft: 12 },
 });
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -342,6 +419,9 @@ export function AIChatScreen({ navigation }) {
 
         {/* Input bar */}
         <View style={chS.inputBar}>
+          <TouchableOpacity style={chS.attachBtn}>
+            <Ionicons name="add" size={24} color={COLORS.textMuted} />
+          </TouchableOpacity>
           <View style={chS.inputWrap}>
             <TextInput
               style={chS.input}
@@ -351,7 +431,6 @@ export function AIChatScreen({ navigation }) {
               placeholderTextColor={COLORS.textMuted}
               multiline
               maxLength={500}
-              onSubmitEditing={() => send()}
             />
           </View>
           <TouchableOpacity
@@ -360,7 +439,7 @@ export function AIChatScreen({ navigation }) {
             style={[chS.sendBtn, (!input.trim() || isGenerating) && { opacity: 0.4 }]}
           >
             <LinearGradient colors={[COLORS.primary, '#D96055']} style={chS.sendGrad}>
-              <Ionicons name="send" size={17} color="#fff" />
+              <Ionicons name="arrow-up" size={20} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -380,15 +459,16 @@ const chS = StyleSheet.create({
   backBtn: { padding: 4, marginRight: SPACING.sm },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   aiAvatar: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: COLORS.primary,
     alignItems: 'center', justifyContent: 'center',
-    marginRight: SPACING.sm,
+    marginRight: SPACING.md,
+    ...SHADOWS.sm,
   },
-  headerTitle: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.textDark },
-  onlineRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  onlineDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34C759', marginRight: 5 },
-  onlineText: { fontFamily: FONTS.regular, fontSize: 11, color: COLORS.textMuted },
+  headerTitle: { fontFamily: FONTS.black, fontSize: 16, color: COLORS.textDark, letterSpacing: 0.2 },
+  onlineRow: { flexDirection: 'row', alignItems: 'center', marginTop: 1 },
+  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#34C759', marginRight: 6, borderWidth: 1.5, borderColor: '#fff' },
+  onlineText: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.textMuted },
   toast: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.dark, marginHorizontal: SPACING.lg,
@@ -398,22 +478,23 @@ const chS = StyleSheet.create({
   toastText: { fontFamily: FONTS.medium, fontSize: 13, color: '#fff', marginLeft: 8 },
   messageList: { paddingVertical: SPACING.md },
   inputBar: {
-    flexDirection: 'row', alignItems: 'flex-end',
-    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1, borderTopColor: COLORS.border,
   },
+  attachBtn: { marginRight: SPACING.sm, padding: 4 },
   inputWrap: {
-    flex: 1, backgroundColor: COLORS.background,
-    borderRadius: RADIUS.pill, borderWidth: 1.5, borderColor: COLORS.border,
-    paddingHorizontal: 16, marginRight: SPACING.sm,
-    minHeight: 44, justifyContent: 'center',
+    flex: 1, backgroundColor: '#F0F2F5',
+    borderRadius: 24, paddingHorizontal: 16,
+    marginRight: SPACING.sm, minHeight: 44,
+    justifyContent: 'center',
   },
   input: {
-    fontFamily: FONTS.regular, fontSize: 15,
-    color: COLORS.textDark, maxHeight: 100,
-    paddingVertical: Platform.OS === 'ios' ? 10 : 6,
+    fontFamily: FONTS.regular, fontSize: 16,
+    color: COLORS.textDark, maxHeight: 120,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 8,
   },
-  sendBtn: { marginBottom: 2 },
-  sendGrad: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  sendBtn: { marginLeft: 4 },
+  sendGrad: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', ...SHADOWS.primary },
 });

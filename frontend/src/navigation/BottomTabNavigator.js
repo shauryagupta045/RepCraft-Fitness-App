@@ -1,22 +1,50 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Image, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import HomeStack from './HomeStack';
 import WorkoutStack from './WorkoutStack';
 import { AIStack, DietStack, ProfileStack } from './Stacks';
 import { COLORS, FONTS, SHADOWS } from '../constants/theme';
 
 const Tab = createBottomTabNavigator();
+const CustomTabBarButton = ({ children, onPress, accessibilityState }) => {
+  const focused = accessibilityState.selected;
+  return (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={onPress}
+      style={styles.aiTabWrapper}
+    >
+      <View style={[styles.aiTabBtn, focused && styles.aiTabBtnActive]}>
+        {children}
+      </View>
+    </TouchableOpacity>
+  );
+};
 
-function TabIcon({ name, focused, label }) {
+
+function TabIcon({ name, focused, label, library = 'Ionicons', imageSource }) {
+  const IconComponent = library === 'MaterialCommunityIcons' ? MaterialCommunityIcons : Ionicons;
   return (
     <View style={styles.tabIconContainer}>
-      <Ionicons
-        name={focused ? name.replace('-outline', '') : name}
-        size={22}
-        color={focused ? COLORS.activeTab : COLORS.textMuted}
-      />
+      {imageSource ? (
+        <Image 
+          source={imageSource} 
+          style={{ 
+            width: 22, 
+            height: 22, 
+            tintColor: focused ? COLORS.activeTab : COLORS.textMuted,
+            resizeMode: 'contain'
+          }} 
+        />
+      ) : (
+        <IconComponent
+          name={focused ? name.replace('-outline', '') : name}
+          size={22}
+          color={focused ? COLORS.activeTab : COLORS.textMuted}
+        />
+      )}
       <Text style={[styles.tabLabel, { color: focused ? COLORS.activeTab : COLORS.textMuted }]}>
         {label}
       </Text>
@@ -47,12 +75,19 @@ export default function BottomTabNavigator() {
       <Tab.Screen name="AI" component={AIStack}
         options={{
           tabBarIcon: ({ focused }) => (
-            <View style={styles.aiTabWrapper}>
-              <View style={[styles.aiTabBtn, focused && styles.aiTabBtnActive]}>
-                <Ionicons name="hardware-chip-outline" size={24} color={focused ? '#fff' : COLORS.textMuted} />
-              </View>
-            </View>
+            <Image 
+              source={require('../../assets/ai-bot.png')}
+              style={{ 
+                width: focused ? 28 : 24, 
+                height: focused ? 28 : 24, 
+                tintColor: focused ? COLORS.surface : COLORS.textMuted,
+                resizeMode: 'contain'
+              }} 
+            />
           ),
+          tabBarButton: (props) => (
+            <CustomTabBarButton {...props} />
+          )
         }}
       />
       <Tab.Screen name="Diet" component={DietStack}

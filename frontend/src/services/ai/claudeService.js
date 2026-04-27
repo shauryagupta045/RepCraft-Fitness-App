@@ -14,7 +14,7 @@ User Profile:
 
 Instructions:
 - When generating a workout plan, return JSON with key "workoutPlan" — an array of day objects with: title, day, muscleGroup, exercises (array of: name, sets, reps, weight, rest)
-- When generating diet targets, return JSON with key "dietPlan" containing: calories, protein, fat, carbs
+- When generating diet targets, return JSON with key "dietPlan" containing: calories, protein, fat, carbs, and a brief description why this plan fits the user's goal.
 - When generating insights, return JSON array with key "insights" — each: icon, title, stat, description, action, color
 - For workout optimization, return JSON with key "suggestions" — each: icon, title, description, impact
 - Be concise, encouraging, and mobile-friendly in all responses

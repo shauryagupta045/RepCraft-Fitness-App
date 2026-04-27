@@ -14,12 +14,9 @@ export function ChatBubble({ message, userName }) {
   if (isUser) {
     return (
       <View style={styles.userBubbleRow}>
-        <View style={styles.userAvatar}>
-          <Text style={styles.userAvatarText}>{(userName || 'U')[0].toUpperCase()}</Text>
-        </View>
         <View style={styles.userBubbleContent}>
           <LinearGradient
-            colors={['#FF7D6B', '#FF9A8B']}
+            colors={['#FF7D6B', '#D96055']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.userBubble}
@@ -28,6 +25,9 @@ export function ChatBubble({ message, userName }) {
           </LinearGradient>
           {time ? <Text style={styles.timeLabel}>{time}</Text> : null}
         </View>
+        <View style={styles.userAvatar}>
+          <Text style={styles.userAvatarText}>{(userName || 'U')[0].toUpperCase()}</Text>
+        </View>
       </View>
     );
   }
@@ -35,7 +35,7 @@ export function ChatBubble({ message, userName }) {
   return (
     <View style={styles.aiBubbleRow}>
       <View style={styles.aiAvatar}>
-        <Ionicons name="hardware-chip-outline" size={16} color={COLORS.primary} />
+        <Ionicons name="hardware-chip-outline" size={16} color="#fff" />
       </View>
       <View style={styles.aiBubbleContent}>
         <View style={[styles.aiBubble, SHADOWS.card]}>
@@ -85,31 +85,34 @@ export function AIActionCard({ plan, onPreview, onSave }) {
 // ─── SmartReplyChips ─────────────────────────────────────────────────────────
 export function SmartReplyChips({ onSelect }) {
   const replies = [
-    'Create a workout plan',
-    'How much protein do I need?',
-    "Analyze my week's progress",
-    'Tips for better sleep',
-    'Optimize my routine',
-    "What should I eat today?",
+    { text: 'Create a workout plan', icon: 'barbell-outline' },
+    { text: 'Write a diet plan', icon: 'nutrition-outline' },
+    { text: 'How much protein?', icon: 'flame-outline' },
+    { text: 'Analyze progress', icon: 'stats-chart-outline' },
+    { text: 'Get sleep tips', icon: 'moon-outline' },
   ];
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.chipsScroll}
-      contentContainerStyle={styles.chipsContent}
-    >
-      {replies.map((reply, i) => (
-        <TouchableOpacity
-          key={i}
-          onPress={() => onSelect(reply)}
-          style={styles.chip}
-        >
-          <Text style={styles.chipText}>{reply}</Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+    <View style={styles.chipsContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.chipsScroll}
+        contentContainerStyle={styles.chipsContent}
+      >
+        {replies.map((reply, i) => (
+          <TouchableOpacity
+            key={i}
+            onPress={() => onSelect(reply.text)}
+            style={[styles.chip, SHADOWS.sm]}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={reply.icon} size={14} color={COLORS.primary} style={{ marginRight: 6 }} />
+            <Text style={styles.chipText}>{reply.text}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -187,11 +190,11 @@ const styles = StyleSheet.create({
   userBubbleText: { fontFamily: FONTS.regular, fontSize: 14, color: '#fff', lineHeight: 20 },
 
   aiBubbleRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: SPACING.md, paddingHorizontal: SPACING.lg },
-  aiBubbleContent: { maxWidth: '75%', marginLeft: SPACING.sm },
-  aiAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,125,107,0.12)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: COLORS.primary },
-  aiBubble: { backgroundColor: COLORS.surface, borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10 },
-  aiBubbleText: { fontFamily: FONTS.regular, fontSize: 14, color: COLORS.textDark, lineHeight: 20 },
-  timeLabel: { fontFamily: FONTS.regular, fontSize: 10, color: COLORS.textMuted, marginTop: 3, marginHorizontal: 4 },
+  aiBubbleContent: { maxWidth: '78%', marginLeft: SPACING.sm },
+  aiAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 },
+  aiBubble: { backgroundColor: COLORS.surface, borderRadius: 20, borderBottomLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 12 },
+  aiBubbleText: { fontFamily: FONTS.regular, fontSize: 14, color: COLORS.textDark, lineHeight: 21 },
+  timeLabel: { fontFamily: FONTS.regular, fontSize: 10, color: COLORS.textMuted, marginTop: 4, marginHorizontal: 4 },
 
   typingDot: { width: 8, height: 8, borderRadius: 4 },
 
@@ -208,10 +211,20 @@ const styles = StyleSheet.create({
   saveBtnText: { fontFamily: FONTS.bold, fontSize: 14, color: '#fff' },
 
   // SmartReplyChips
-  chipsScroll: { marginBottom: SPACING.sm },
-  chipsContent: { paddingHorizontal: SPACING.lg, gap: SPACING.sm },
-  chip: { borderRadius: RADIUS.pill, borderWidth: 1.5, borderColor: COLORS.primary, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,125,107,0.06)' },
-  chipText: { fontFamily: FONTS.medium, fontSize: 13, color: COLORS.primary },
+  chipsContainer: { paddingVertical: SPACING.sm },
+  chipsScroll: { marginBottom: 4 },
+  chipsContent: { paddingHorizontal: SPACING.lg, paddingRight: SPACING.xl, alignItems: 'center', gap: 10 },
+  chip: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    borderRadius: 20, 
+    borderWidth: 1, 
+    borderColor: 'rgba(232,112,94,0.3)', 
+    paddingHorizontal: 16, 
+    paddingVertical: 10, 
+    backgroundColor: COLORS.surface 
+  },
+  chipText: { fontFamily: FONTS.bold, fontSize: 13, color: COLORS.textDark },
 
   // InsightCard
   insightCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.card, padding: SPACING.lg, marginBottom: SPACING.md, borderLeftWidth: 4 },

@@ -16,12 +16,12 @@ import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 /* Badge definitions */
 const BADGE_DEFS = [
-  { id: 'streak7',   icon: 'medal-outline',   label: '7-Day Streak',  color: COLORS.primary,  unlocked: (u) => u.streak >= 7 },
-  { id: 'hydro',     icon: 'water-outline',   label: 'Hydration Hero',color: COLORS.secondary,unlocked: (_, __, m) => m.todayMetrics.water >= 2.5 },
-  { id: 'w10',       icon: 'barbell-outline', label: '10 Workouts',   color: '#6C8FC7',       unlocked: (_, logs) => logs.length >= 10 },
-  { id: 'hyrox',     icon: 'stopwatch-outline',label:'Hyrox Starter', color: '#F5A623',       unlocked: (_, __, _m, hyrox) => hyrox.length > 0 },
-  { id: 'streak30',  icon: 'trophy-outline',  label: '30-Day Streak', color: '#FFD700',       unlocked: (u) => u.streak >= 30 },
-  { id: 'sleep8',    icon: 'moon-outline',    label: 'Sleep Master',  color: '#6C8FC7',       unlocked: (_, __, m) => m.todayMetrics.sleep >= 8 },
+  { id: 'streak7', icon: 'medal-outline', label: '7-Day Streak', color: COLORS.primary, unlocked: (u) => u.streak >= 7 },
+  { id: 'hydro', icon: 'water-outline', label: 'Hydration Hero', color: COLORS.secondary, unlocked: (_, __, m) => m.todayMetrics.water >= 2.5 },
+  { id: 'w10', icon: 'barbell-outline', label: '10 Workouts', color: '#6C8FC7', unlocked: (_, logs) => logs.length >= 10 },
+  { id: 'hyrox', icon: 'stopwatch-outline', label: 'Hyrox Starter', color: '#F5A623', unlocked: (_, __, _m, hyrox) => hyrox.length > 0 },
+  { id: 'streak30', icon: 'trophy-outline', label: '30-Day Streak', color: '#FFD700', unlocked: (u) => u.streak >= 30 },
+  { id: 'sleep8', icon: 'moon-outline', label: 'Sleep Master', color: '#6C8FC7', unlocked: (_, __, m) => m.todayMetrics.sleep >= 8 },
 ];
 
 function Badge({ def, unlocked }) {
@@ -56,18 +56,21 @@ const bS = StyleSheet.create({
   label: { fontFamily: FONTS.medium, fontSize: 10, color: COLORS.textDark, textAlign: 'center', lineHeight: 13 },
 });
 
-/* Settings rows */
 const SETTINGS = [
-  { icon: 'notifications-outline', label: 'Notifications',  color: COLORS.primary },
-  { icon: 'options-outline',       label: 'Units & Display', color: COLORS.secondary },
-  { icon: 'shield-checkmark-outline', label: 'Privacy Policy', color: '#6C8FC7' },
-  { icon: 'help-circle-outline',   label: 'Help & Support',  color: '#F5A623' },
+  { icon: 'notifications-outline', label: 'Notifications', color: COLORS.primary, screen: 'NotificationSettings' },
+  { icon: 'options-outline', label: 'Units & Display', color: COLORS.secondary, screen: 'UnitSettings' },
+  { icon: 'shield-checkmark-outline', label: 'Privacy Policy', color: '#6C8FC7', screen: 'Information', params: { type: 'privacy' } },
+  { icon: 'help-circle-outline', label: 'Help & Support', color: '#F5A623', screen: 'Information', params: { type: 'help' } },
 ];
 
 export default function ProfileScreen({ navigation }) {
-  const { user, logout } = useAuthStore();
+  const { user, settings, logout } = useAuthStore();
   const { workoutLogs, cardioSessions, hyroxSessions } = useWorkoutStore();
   const metrics = useMetricsStore();
+
+  const isMetric = settings.units === 'metric';
+  const weightUnit = isMetric ? 'kg' : 'lb';
+  const heightUnit = isMetric ? 'cm' : 'in';
 
   const badges = useMemo(() =>
     BADGE_DEFS.map(b => ({
@@ -105,7 +108,11 @@ export default function ProfileScreen({ navigation }) {
             <View style={s.avatar}>
               <Text style={s.avatarText}>{(user?.name || 'A')[0].toUpperCase()}</Text>
             </View>
-            <TouchableOpacity style={s.editAvatarBtn}>
+            <TouchableOpacity
+              style={s.editAvatarBtn}
+              onPress={() => navigation.navigate('EditProfile')}
+              activeOpacity={0.7}
+            >
               <Ionicons name="camera-outline" size={14} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -124,8 +131,8 @@ export default function ProfileScreen({ navigation }) {
         <View style={s.statsRow}>
           {[
             { icon: 'barbell-outline', label: 'Workouts', value: workoutLogs.length, color: COLORS.primary },
-            { icon: 'bicycle-outline', label: 'Cardio',   value: cardioSessions.length, color: COLORS.secondary },
-            { icon: 'time-outline',    label: 'Hours',    value: Math.round(totalMin / 60), color: '#6C8FC7' },
+            { icon: 'bicycle-outline', label: 'Cardio', value: cardioSessions.length, color: COLORS.secondary },
+            { icon: 'time-outline', label: 'Hours', value: Math.round(totalMin / 60), color: '#6C8FC7' },
           ].map((stat, i) => (
             <View key={i} style={[s.statCard, SHADOWS.card]}>
               <Text style={[s.statNum, { color: stat.color }]}>{stat.value}</Text>
@@ -166,13 +173,24 @@ export default function ProfileScreen({ navigation }) {
 
         {/* ── Personal info ── */}
         <View style={[s.card, SHADOWS.card]}>
-          <Text style={s.cardTitle}>Personal Info</Text>
+          <View style={s.cardHeader}>
+            <View style={s.cardHeaderLeft}>
+              <Ionicons name="person-outline" size={20} color={COLORS.primary} />
+              <Text style={s.cardTitle}>Personal Info</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('EditProfile')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={s.editLink}>Edit</Text>
+            </TouchableOpacity>
+          </View>
           {[
-            { icon: 'flag-outline',   label: 'Goal',    value: user?.goal || 'Build Muscle' },
-            { icon: 'ribbon-outline', label: 'Level',   value: user?.level || 'Intermediate' },
-            { icon: 'scale-outline',  label: 'Weight',  value: `${user?.weight || 82} kg` },
-            { icon: 'body-outline',   label: 'Height',  value: `${user?.height || 180} cm` },
-            { icon: 'person-outline', label: 'Age',     value: `${user?.age || 28}` },
+            { icon: 'flag-outline', label: 'Goal', value: user?.goal || 'Build Muscle' },
+            { icon: 'ribbon-outline', label: 'Level', value: user?.level || 'Intermediate' },
+            { icon: 'scale-outline', label: 'Weight', value: `${user?.weight || 82} ${weightUnit}` },
+            { icon: 'body-outline', label: 'Height', value: `${user?.height || 180} ${heightUnit}` },
+            { icon: 'person-outline', label: 'Age', value: `${user?.age || 28}` },
           ].map((row, i, arr) => (
             <View key={row.label} style={[s.infoRow, i < arr.length - 1 && s.infoRowBorder]}>
               <View style={s.infoLeft}>
@@ -191,6 +209,8 @@ export default function ProfileScreen({ navigation }) {
             <TouchableOpacity
               key={row.label}
               style={[s.infoRow, i < SETTINGS.length - 1 && s.infoRowBorder]}
+              onPress={() => navigation.navigate(row.screen, row.params)}
+              activeOpacity={0.7}
             >
               <View style={s.infoLeft}>
                 <View style={[s.settingIcon, { backgroundColor: row.color + '18' }]}>
@@ -216,7 +236,7 @@ export default function ProfileScreen({ navigation }) {
           <Text style={s.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
-        <Text style={s.version}>RepCraft v1.0.0 · Powered by Claude AI</Text>
+        <Text style={s.version}>RepCraft v1.0.0</Text>
         <View style={{ height: 32 }} />
       </ScrollView>
     </SafeAreaView>
@@ -250,7 +270,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: COLORS.dark,
   },
-  heroName:  { fontFamily: FONTS.black, fontSize: 22, color: '#fff', marginBottom: 3 },
+  heroName: { fontFamily: FONTS.black, fontSize: 22, color: '#fff', marginBottom: 3 },
   heroEmail: { fontFamily: FONTS.regular, fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: SPACING.sm },
   goalPill: {
     flexDirection: 'row', alignItems: 'center',
@@ -309,5 +329,10 @@ const s = StyleSheet.create({
   version: {
     fontFamily: FONTS.regular, fontSize: 11, color: COLORS.textMuted,
     textAlign: 'center', marginBottom: SPACING.sm,
+  },
+  editLink: {
+    fontFamily: FONTS.bold,
+    fontSize: 14,
+    color: COLORS.primary,
   },
 });

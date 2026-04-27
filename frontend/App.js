@@ -56,10 +56,18 @@ import {
   ProgressAnalyzerScreen,
   RoutineOptimizerScreen,
 } from './src/screens/ai/PlannerScreens';
+import FormTrackerScreen from './src/screens/ai/FormTrackerScreen';
 
 // ─── Diet & Profile ────────────────────────────────────────────────────
 import DietScreen    from './src/screens/diet/DietScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
+import EditProfileScreen from './src/screens/profile/EditProfileScreen';
+import { 
+  SettingsMainScreen,
+  NotificationSettingsScreen,
+  UnitSettingsScreen,
+  InformationScreen 
+} from './src/screens/profile/SettingsScreens';
 
 // ─── Store & Theme ─────────────────────────────────────────────────────
 import { useAuthStore } from './src/store/authStore';
@@ -137,6 +145,7 @@ function AI() {
       <AiStack.Screen name="DietPlanner"      component={DietPlannerScreen} />
       <AiStack.Screen name="ProgressAnalyzer" component={ProgressAnalyzerScreen} />
       <AiStack.Screen name="RoutineOptimizer" component={RoutineOptimizerScreen} />
+      <AiStack.Screen name="FormTracker"      component={FormTrackerScreen} />
     </AiStack.Navigator>
   );
 }
@@ -150,11 +159,17 @@ function Diet() {
   );
 }
 
+
 // ─── Profile navigator ─────────────────────────────────────────────────
 function Profile() {
   return (
     <ProfStack.Navigator screenOptions={WEB_SAFE_STACK_OPTS}>
       <ProfStack.Screen name="ProfileMain" component={ProfileScreen} />
+      <ProfStack.Screen name="EditProfile" component={EditProfileScreen} />
+      <ProfStack.Screen name="SettingsMain" component={SettingsMainScreen} />
+      <ProfStack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+      <ProfStack.Screen name="UnitSettings" component={UnitSettingsScreen} />
+      <ProfStack.Screen name="Information" component={InformationScreen} />
     </ProfStack.Navigator>
   );
 }
