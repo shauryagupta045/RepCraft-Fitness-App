@@ -28,6 +28,7 @@ import SignupScreen     from './src/screens/auth/SignupScreen';
 
 // ─── Home ──────────────────────────────────────────────────────────────
 import HomeScreen from './src/screens/home/HomeScreen';
+import NotificationScreen from './src/screens/home/NotificationScreen';
 import {
   WaterDetailScreen,
   SleepDetailScreen,
@@ -106,6 +107,7 @@ function Home() {
   return (
     <HomeStack.Navigator screenOptions={WEB_SAFE_STACK_OPTS}>
       <HomeStack.Screen name="HomeMain"          component={HomeScreen} />
+      <HomeStack.Screen name="Notifications"     component={NotificationScreen} />
       <HomeStack.Screen name="WaterDetail"       component={WaterDetailScreen} />
       <HomeStack.Screen name="SleepDetail"       component={SleepDetailScreen} />
       <HomeStack.Screen name="StepDetail"        component={StepDetailScreen} />

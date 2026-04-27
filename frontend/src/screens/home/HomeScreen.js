@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,6 +44,17 @@ export default function HomeScreen({ navigation }) {
   const { routines, workoutLogs } = useWorkoutStore();
   const todayRoutine = routines[0];
 
+  const [showCount, setShowCount] = useState(true);
+  const notificationCount = 5; // Example count
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowCount(false);
+    }, 15000);
+    return () => clearTimeout(timer);
+  }, []);
+
+
   const hour = new Date().getHours();
   const greetingUpper = hour < 12 ? 'GOOD MORNING' : hour < 17 ? 'GOOD AFTERNOON' : 'GOOD EVENING';
   const firstName = user?.name?.split(' ')[0] || 'Alex';
@@ -62,19 +73,30 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               {/* Avatar circle with initial */}
-              <View style={styles.avatarRing}>
+              <TouchableOpacity 
+                style={styles.avatarRing}
+                onPress={() => navigation.navigate('Profile')}
+              >
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{firstName[0].toUpperCase()}</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
               <View style={styles.greetingCol}>
                 <Text style={styles.greetingSmall}>{greetingUpper}</Text>
                 <Text style={styles.greetingLarge}>Hello, {firstName}</Text>
               </View>
             </View>
             {/* Bell */}
-            <TouchableOpacity style={styles.bellBtn}>
+            <TouchableOpacity 
+              style={styles.bellBtn}
+              onPress={() => navigation.navigate('Notifications')}
+            >
               <Ionicons name="notifications-outline" size={24} color="#6C7A87" />
+              {notificationCount > 0 && (
+                <View style={[styles.badge, !showCount && styles.dotBadge]}>
+                  {showCount && <Text style={styles.badgeText}>{notificationCount}</Text>}
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </AnimCard>
@@ -234,7 +256,35 @@ const styles = StyleSheet.create({
     color: '#0A1B28',
     letterSpacing: -0.2,
   },
-  bellBtn: { padding: 6, marginRight: -6 },
+  bellBtn: { padding: 6, marginRight: -6, position: 'relative' },
+  badge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#fff',
+    zIndex: 10,
+  },
+  dotBadge: {
+    minWidth: 10,
+    height: 10,
+    top: 5,
+    right: 5,
+    borderRadius: 5,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 8,
+    fontFamily: FONTS.bold,
+    textAlign: 'center',
+    lineHeight: 12,
+  },
   bellDot: {
     display: 'none',
   },

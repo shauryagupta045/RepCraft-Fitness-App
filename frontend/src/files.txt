@@ -1,0 +1,159 @@
+﻿
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----         4/27/2026   2:25 PM              0 files.txt                                                            
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\components\ai
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----         4/17/2026  11:08 PM          11612 AIComponents.js                                                      
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\components\common
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----          4/1/2026  11:42 PM           3595 Button.js                                                            
+-a----          4/1/2026  11:42 PM           1394 Card.js                                                              
+-a----          4/2/2026   5:53 AM           3279 Input.js                                                             
+-a----          4/1/2026  11:42 PM           2607 MiniBarChart.js                                                      
+-a----          4/5/2026  11:03 PM           2115 Toast.js                                                             
+-a----          4/2/2026   5:54 AM           3025 UIElements.js                                                        
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\components\home
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----         4/13/2026  12:52 PM          24687 HomeCards.js                                                         
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\components\workout
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----          4/4/2026  12:17 AM          13537 WorkoutComponents.js                                                 
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\constants
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----          4/1/2026  11:40 PM          10285 exercises.js                                                         
+-a----          4/1/2026  11:39 PM           6034 mockData.js                                                          
+-a----          4/6/2026   5:36 PM           2029 theme.js                                                             
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\navigation
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----          4/2/2026  11:08 AM            624 AuthStack.js                                                         
+-a----         4/17/2026   8:28 PM           4527 BottomTabNavigator.js                                                
+-a----          4/2/2026  11:09 AM            924 HomeStack.js                                                         
+-a----          4/2/2026  11:08 AM            976 RootNavigator.js                                                     
+-a----         4/11/2026   6:31 PM           1193 WorkoutStack.js                                                      
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\screens\ai
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----         4/24/2026   7:53 PM          18084 AIScreens.js                                                         
+-a----         4/24/2026   7:53 PM          10641 FormTrackerScreen.js                                                 
+-a----         4/24/2026   7:24 PM          43202 PlannerScreens.js                                                    
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\screens\auth
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----          4/6/2026   7:38 AM           8255 LoginScreen.js                                                       
+-a----          4/6/2026   7:38 AM           7446 OnboardingScreen.js                                                  
+-a----          4/6/2026   4:43 PM           9124 SignupScreen.js                                                      
+-a----          4/6/2026   5:35 PM           3455 SplashScreen.js                                                      
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\screens\diet
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----          4/5/2026  11:03 PM          17558 DietScreen.js                                                        
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\screens\home
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----          4/9/2026  12:31 AM          59218 DetailScreens.js                                                     
+-a----          4/9/2026  12:30 AM          10282 HomeScreen.js                                                        
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\screens\profile
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----         4/15/2026   6:27 PM           7454 EditProfileScreen.js                                                 
+-a----         4/16/2026   7:42 PM          14495 ProfileScreen.js                                                     
+-a----         4/15/2026   6:23 PM           9372 SettingsScreens.js                                                   
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\screens\workout
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----          4/5/2026  11:02 PM          20548 ActiveWorkoutScreen.js                                               
+-a----         4/11/2026   6:31 PM           9526 ExerciseDetailScreen.js                                              
+-a----         4/11/2026   6:31 PM          12547 ExerciseHistoryScreen.js                                             
+-a----         4/10/2026  12:42 PM          31433 RoutineBuilderScreen.js                                              
+-a----         4/13/2026   2:07 PM          51362 WorkoutScreen.js                                                     
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\services\ai
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----         4/17/2026  11:09 PM           4605 claudeService.js                                                     
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\store
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----          4/1/2026  11:41 PM           1433 aiStore.js                                                           
+-a----         4/15/2026   6:21 PM           1995 authStore.js                                                         
+-a----          4/1/2026  11:41 PM           1582 dietStore.js                                                         
+-a----          4/1/2026  11:40 PM           1961 metricsStore.js                                                      
+-a----          4/1/2026  11:40 PM           4792 workoutStore.js                                                      
+
+
+    Directory: C:\Users\hp\Downloads\RepCraft2_FIXED\RepCraft2\frontend\src\utils
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----          4/1/2026  11:41 PM           1242 dateUtils.js                                                         
+-a----          4/1/2026  11:41 PM           1578 metricsUtils.js                                                      
+-a----          4/1/2026  11:41 PM            882 validationUtils.js                                                   
+
+
