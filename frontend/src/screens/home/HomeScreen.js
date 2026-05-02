@@ -9,6 +9,7 @@ import Animated, {
 import { useAuthStore } from '../../store/authStore';
 import { useMetricsStore } from '../../store/metricsStore';
 import { useWorkoutStore } from '../../store/workoutStore';
+import { PedometerService } from '../../services/sensors/pedometerService';
 import {
   ReadinessCard,
   StepCard,
@@ -40,18 +41,61 @@ function AnimCard({ children, index }) {
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuthStore();
-  const { weeklyData, todayMetrics } = useMetricsStore();
+  const { weeklyData, todayMetrics, setSteps, resetDailyStepsIfNewDay } = useMetricsStore();
   const { routines, workoutLogs } = useWorkoutStore();
   const todayRoutine = routines[0];
 
   const [showCount, setShowCount] = useState(true);
+  const [pedometerStatus, setPedometerStatus] = useState('initializing'); // 'initializing' | 'unavailable' | 'denied' | 'active' | 'error'
   const notificationCount = 5; // Example count
 
   useEffect(() => {
+    // Reset step count to 0 if it's a new calendar day
+    resetDailyStepsIfNewDay();
+
     const timer = setTimeout(() => {
       setShowCount(false);
     }, 15000);
-    return () => clearTimeout(timer);
+
+    let subscription;
+    const initPedometer = async () => {
+      try {
+        // Check availability
+        const isAvailable = await PedometerService.isAvailable();
+        if (!isAvailable) {
+          setPedometerStatus('unavailable');
+          return;
+        }
+
+        // Request permission
+        const granted = await PedometerService.requestPermissions();
+        if (!granted) {
+          setPedometerStatus('denied');
+          return;
+        }
+
+        // Step 1: get steps walked from midnight until now
+        const initialSteps = await PedometerService.getStepsToday();
+        setSteps(Math.max(0, initialSteps));
+        setPedometerStatus('active');
+
+        // Step 2: subscribe — result.steps = steps taken SINCE subscription started
+        // Total = initialSteps (before subscription) + sessionSteps (since subscription)
+        subscription = PedometerService.subscribe((sessionSteps) => {
+          setSteps(Math.max(0, initialSteps + sessionSteps));
+        });
+      } catch (err) {
+        console.error('Pedometer error:', err);
+        setPedometerStatus('error');
+      }
+    };
+
+    initPedometer();
+
+    return () => {
+      clearTimeout(timer);
+      if (subscription) subscription.remove();
+    };
   }, []);
 
 
@@ -128,6 +172,7 @@ export default function HomeScreen({ navigation }) {
           <StepCard
             onPress={() => navigation.navigate('StepDetail')}
             weekData={weekSteps}
+            pedometerStatus={pedometerStatus}
           />
         </AnimCard>
 

@@ -16,7 +16,7 @@ import { useAIStore } from '../../store/aiStore';
 import { useMetricsStore } from '../../store/metricsStore';
 import { useWorkoutStore } from '../../store/workoutStore';
 import { ChatBubble, SmartReplyChips, AIActionCard, TypingIndicator } from '../../components/ai/AIComponents';
-import { sendMessageToClaude } from '../../services/ai/claudeService';
+import { sendMessageToGemini } from '../../services/ai/geminiService';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 /* ─── Feature card data ──────────────────────────────────────────────────────── */
@@ -314,7 +314,7 @@ const aS = StyleSheet.create({
 ─────────────────────────────────────────────────────────────────────────────── */
 export function AIChatScreen({ navigation }) {
   const { user }     = useAuthStore();
-  const { chatHistory, isGenerating, addMessage, setGenerating, setLastPlan, getAPIMessages } = useAIStore();
+  const { chatHistory, isGenerating, addMessage, setGenerating, setLastPlan, getAPIMessages, clearChat } = useAIStore();
   const { todayMetrics } = useMetricsStore();
   const { applyAIPlan }  = useWorkoutStore();
   const [input, setInput]       = useState('');
@@ -339,7 +339,7 @@ export function AIChatScreen({ navigation }) {
 
     try {
       const msgs = [...getAPIMessages(), { role: 'user', content: msg }];
-      const { text: reply, parsedPlan } = await sendMessageToClaude(msgs, userCtx);
+      const { text: reply, parsedPlan } = await sendMessageToGemini(msgs, userCtx);
       addMessage({ role: 'assistant', text: reply });
       if (parsedPlan) { setLastPlanMsg(parsedPlan); setLastPlan(parsedPlan); }
     } catch {
@@ -359,6 +359,12 @@ export function AIChatScreen({ navigation }) {
     }
   };
 
+  const handleClearChat = () => {
+    clearChat();
+    setToast('Chat history cleared');
+    setTimeout(() => setToast(''), 2800);
+  };
+
   return (
     <SafeAreaView style={chS.container} edges={['top']}>
       {/* Header */}
@@ -374,12 +380,12 @@ export function AIChatScreen({ navigation }) {
             <Text style={chS.headerTitle}>AI Coach</Text>
             <View style={chS.onlineRow}>
               <View style={chS.onlineDot} />
-              <Text style={chS.onlineText}>Online · Claude Sonnet</Text>
+              <Text style={chS.onlineText}>Online · Gemini 3 Flash</Text>
             </View>
           </View>
         </View>
-        <TouchableOpacity>
-          <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textMuted} />
+        <TouchableOpacity onPress={handleClearChat} style={{ padding: 4 }}>
+          <Ionicons name="trash-outline" size={20} color={COLORS.textMuted} />
         </TouchableOpacity>
       </View>
 

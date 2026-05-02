@@ -39,10 +39,16 @@ export const useAIStore = create(
 
       getAPIMessages: () => {
         const { chatHistory } = get();
-        return chatHistory.map((msg) => ({
-          role: msg.role,
-          content: msg.text,
-        }));
+        return chatHistory
+          .filter(msg => 
+            !msg.text.includes("Connection error — please check your API key") && 
+            !msg.text.includes("temporarily impaired") &&
+            !msg.text.includes("I apologize")
+          )
+          .map((msg) => ({
+            role: msg.role,
+            content: msg.text,
+          }));
       },
     }),
     {

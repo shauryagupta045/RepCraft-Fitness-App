@@ -15,7 +15,7 @@ export const MOCK_METRICS = {
   today: {
     water: 1.75,
     sleep: 7.3,
-    steps: 6842,
+    steps: 0,
     caloriesBurned: 480,
     caloriesConsumed: 1950,
     fatigue: 2,

@@ -37,7 +37,7 @@ const SLIDES = [
     iconBg: '#EDF9F8',
     gradient: [COLORS.secondary, '#3BBBB2'],
     title: 'AI Coach,\nAlways On',
-    body: 'Get personalized insights, workout plans, and nutrition advice powered by Claude AI — any time.',
+    body: 'Get personalized insights, workout plans, and nutrition advice powered by Gemini AI — any time.',
   },
 ];
 

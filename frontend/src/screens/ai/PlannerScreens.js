@@ -11,7 +11,7 @@ import { useWorkoutStore } from '../../store/workoutStore';
 import { useDietStore } from '../../store/dietStore';
 import { useMetricsStore } from '../../store/metricsStore';
 import { InsightCard } from '../../components/ai/AIComponents';
-import { generateWorkoutPlan, generateDietPlan, analyzeProgress, optimizeRoutine } from '../../services/ai/claudeService';
+import { generateWorkoutPlan, generateDietPlan, analyzeProgress, optimizeRoutine } from '../../services/ai/geminiService';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 // ─── Generating Screen ────────────────────────────────────────────────────────
@@ -37,7 +37,7 @@ function GeneratingView({ label }) {
         </View>
       </View>
       <Text style={genStyles.label}>{label || 'Generating your plan...'}</Text>
-      <Text style={genStyles.sub}>Powered by Claude AI</Text>
+      <Text style={genStyles.sub}>Powered by Gemini AI</Text>
     </View>
   );
 }
@@ -518,7 +518,7 @@ export function ProgressAnalyzerScreen({ navigation }) {
               <Ionicons name="bar-chart-outline" size={48} color={COLORS.primary} />
             </View>
             <Text style={styles.analyzeTitle}>Ready to analyze?</Text>
-            <Text style={styles.analyzeSub}>Claude will review your last 30 days of data and surface key insights.</Text>
+            <Text style={styles.analyzeSub}>Gemini will review your last 30 days of data and surface key insights.</Text>
             <TouchableOpacity onPress={analyze} style={styles.nextBtn}>
               <LinearGradient colors={['#FF7D6B', '#FF9A8B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.nextBtnGrad}>
                 <Ionicons name="hardware-chip-outline" size={18} color="#fff" />
@@ -595,7 +595,7 @@ export function RoutineOptimizerScreen({ navigation }) {
               <Ionicons name="refresh-outline" size={48} color={COLORS.secondary} />
             </View>
             <Text style={styles.analyzeTitle}>Optimize Your Routines</Text>
-            <Text style={styles.analyzeSub}>Claude will review your current workout split and suggest science-based improvements.</Text>
+            <Text style={styles.analyzeSub}>Gemini will review your current workout split and suggest science-based improvements.</Text>
             <Text style={styles.routineCount}>{routines.length} routines to analyze</Text>
             <TouchableOpacity onPress={optimize} style={styles.nextBtn}>
               <LinearGradient colors={['#6DD5C0', '#4ECDB4']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.nextBtnGrad}>

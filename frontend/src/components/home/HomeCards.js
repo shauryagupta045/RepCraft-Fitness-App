@@ -263,12 +263,22 @@ const rcStyles = StyleSheet.create({
 });
 
 // ─── 2. STEP COUNTER CARD ─────────────────────────────────────────────────────
-export function StepCard({ onPress, weekData = [] }) {
-  const steps = 6842;
+const PEDOMETER_STATUS_CONFIG = {
+  initializing: { label: '● Connecting sensor…', color: '#8A94A6' },
+  active:        { label: '● Live tracking',      color: '#1A8B80' },
+  unavailable:   { label: '⚠ Sensor not found on this device', color: '#E07A00' },
+  denied:        { label: '⚠ Permission denied — go to Settings', color: '#C0392B' },
+  error:         { label: '⚠ Sensor error — restart app', color: '#C0392B' },
+};
+
+export function StepCard({ onPress, weekData = [], pedometerStatus = 'initializing' }) {
+  const { todayMetrics } = useMetricsStore();
+  const steps = todayMetrics.steps || 0;
   const goal = 10000;
   const pct = Math.min(steps / goal, 1);
   const safeWeek = weekData.length === 7 ? weekData : [8200, 5400, 9100, 7300, 8800, steps, 0];
   const GREEN = '#1A8B80';
+  const statusCfg = PEDOMETER_STATUS_CONFIG[pedometerStatus] || PEDOMETER_STATUS_CONFIG.initializing;
 
   return (
     <TouchableOpacity
@@ -288,6 +298,11 @@ export function StepCard({ onPress, weekData = [] }) {
         </View>
         <Text style={scStyles.count}>{steps.toLocaleString()}</Text>
       </View>
+
+      {/* Sensor status badge */}
+      <Text style={[scStyles.statusBadge, { color: statusCfg.color }]}>
+        {statusCfg.label}
+      </Text>
 
       <View style={scStyles.progressTrack}>
         <View style={[scStyles.progressFill, { width: `${pct * 100}%`, backgroundColor: GREEN }]} />
@@ -313,7 +328,7 @@ const scStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.sm,
   },
   titleLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   iconBox: {
@@ -341,6 +356,12 @@ const scStyles = StyleSheet.create({
     fontSize: 42,
     color: '#0A1B28',
     letterSpacing: -1,
+  },
+  statusBadge: {
+    fontFamily: FONTS.medium,
+    fontSize: 11,
+    marginBottom: SPACING.md,
+    marginTop: 2,
   },
   progressTrack: {
     height: 6,

@@ -3,6 +3,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MOCK_METRICS } from '../constants/mockData';
 
+const todayDateString = () => new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+
 export const useMetricsStore = create(
   persist(
     (set, get) => ({
@@ -10,6 +12,19 @@ export const useMetricsStore = create(
       weeklyData: MOCK_METRICS.week,
       lastWeekData: MOCK_METRICS.lastWeek,
       monthlyData: MOCK_METRICS.monthly,
+      lastResetDate: todayDateString(), // track the last day steps were reset
+
+      // Called on app open — resets steps to 0 if it's a new calendar day
+      resetDailyStepsIfNewDay: () => {
+        const today = todayDateString();
+        const { lastResetDate } = get();
+        if (lastResetDate !== today) {
+          set((state) => ({
+            lastResetDate: today,
+            todayMetrics: { ...state.todayMetrics, steps: 0 },
+          }));
+        }
+      },
 
       logWater: (amount = 0.25) =>
         set((state) => ({
@@ -34,9 +49,10 @@ export const useMetricsStore = create(
           todayMetrics: { ...state.todayMetrics, steps: state.todayMetrics.steps + steps },
         })),
 
+      // Simple override — the pedometer flow uses this exclusively
       setSteps: (steps) =>
         set((state) => ({
-          todayMetrics: { ...state.todayMetrics, steps },
+          todayMetrics: { ...state.todayMetrics, steps: Math.max(0, steps) },
         })),
 
       logCaloriesBurned: (cal) =>
