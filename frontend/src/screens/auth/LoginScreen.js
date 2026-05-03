@@ -26,7 +26,7 @@ export default function LoginScreen({ navigation }) {
       setError('Please enter your email and password.');
       return;
     }
-    login({ email, name: 'Alex Jordan', goal: 'Build Muscle', level: 'Intermediate', streak: 14 });
+    navigation.navigate('SetupFlow');
   };
 
   return (
@@ -124,6 +124,12 @@ export default function LoginScreen({ navigation }) {
           <TouchableOpacity style={[s.socialBtn, SHADOWS.card]} onPress={handleLogin}>
             <Ionicons name="logo-google" size={18} color={COLORS.textDark} />
             <Text style={s.socialText}>Continue with Google</Text>
+          </TouchableOpacity>
+
+          {/* Facebook */}
+          <TouchableOpacity style={[s.socialBtn, SHADOWS.card, { marginBottom: SPACING.xl }]} onPress={handleLogin}>
+            <Ionicons name="logo-facebook" size={18} color="#1877F2" />
+            <Text style={s.socialText}>Continue with Facebook</Text>
           </TouchableOpacity>
 
           <View style={s.signupRow}>

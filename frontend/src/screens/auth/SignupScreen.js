@@ -12,13 +12,6 @@ import { COLORS, FONTS, RADIUS, SPACING, SHADOWS } from '../../constants/theme';
 
 
 
-const GOALS = [
-  { id: 'lose', label: 'Lose Weight', icon: 'trending-down-outline' },
-  { id: 'muscle', label: 'Build Muscle', icon: 'barbell-outline' },
-  { id: 'strength', label: 'Get Stronger', icon: 'flash-outline' },
-  { id: 'active', label: 'Stay Active', icon: 'leaf-outline' },
-];
-
 export default function SignupScreen({ navigation }) {
   const { height } = useWindowDimensions();
   const { login } = useAuthStore();
@@ -26,7 +19,6 @@ export default function SignupScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [selectedGoal, setSelectedGoal] = useState('muscle');
   const [agreed, setAgreed] = useState(false);
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState({ visible: false, message: '', type: 'error' });
@@ -45,9 +37,7 @@ export default function SignupScreen({ navigation }) {
       setErrors(newErrors);
       return;
     }
-    const goal = GOALS.find((g) => g.id === selectedGoal)?.label || 'Build Muscle';
-    login({ name, email, goal });
-    navigation.replace('MainApp');
+    navigation.navigate('SetupFlow');
   };
 
   return (
@@ -79,26 +69,6 @@ export default function SignupScreen({ navigation }) {
           <Input label="Password" placeholder="••••••••" value={password} onChangeText={setPassword} secureTextEntry error={errors.password} leftIcon={<Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} />} />
           <Input label="Confirm Password" placeholder="••••••••" value={confirm} onChangeText={setConfirm} secureTextEntry error={errors.confirm} leftIcon={<Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} />} />
 
-          <Text style={styles.sectionLabel}>Your Primary Goal</Text>
-          <View style={styles.goalsGrid}>
-            {GOALS.map((g) => (
-              <TouchableOpacity
-                key={g.id}
-                onPress={() => setSelectedGoal(g.id)}
-                style={[styles.goalCard, selectedGoal === g.id && styles.goalCardActive]}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name={g.icon}
-                  size={24}
-                  color={selectedGoal === g.id ? COLORS.primary : COLORS.textMuted}
-                />
-                <Text style={[styles.goalLabel, selectedGoal === g.id && styles.goalLabelActive]}>
-                  {g.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
 
           <TouchableOpacity
             style={styles.termsRow}
@@ -126,6 +96,22 @@ export default function SignupScreen({ navigation }) {
               <Text style={styles.signupBtnText}>Sign Up</Text>
               <Ionicons name="arrow-forward" size={18} color="#fff" />
             </LinearGradient>
+          </TouchableOpacity>
+
+          <View style={styles.divRow}>
+            <View style={styles.divLine} />
+            <Text style={styles.divText}>or</Text>
+            <View style={styles.divLine} />
+          </View>
+
+          <TouchableOpacity style={[styles.socialBtn, SHADOWS.card]} onPress={handleSignup}>
+            <Ionicons name="logo-google" size={18} color={COLORS.textDark} />
+            <Text style={styles.socialText}>Continue with Google</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={[styles.socialBtn, SHADOWS.card, { marginBottom: SPACING.xl }]} onPress={handleSignup}>
+            <Ionicons name="logo-facebook" size={18} color="#1877F2" />
+            <Text style={styles.socialText}>Continue with Facebook</Text>
           </TouchableOpacity>
 
           <View style={styles.loginRow}>
@@ -161,22 +147,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   heading: { fontFamily: FONTS.black, fontSize: 26, color: COLORS.textDark, marginBottom: SPACING.xl },
-  sectionLabel: { fontFamily: FONTS.bold, fontSize: 14, color: COLORS.textDark, marginBottom: SPACING.md },
-  goalsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.xl },
-  goalCard: {
-    width: '47%',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.card,
-    padding: SPACING.md,
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    ...SHADOWS.card,
-  },
-  goalCardActive: { borderColor: COLORS.primary, backgroundColor: 'rgba(255,125,107,0.06)' },
-  goalLabel: { fontFamily: FONTS.medium, fontSize: 13, color: COLORS.textMuted, textAlign: 'center' },
-  goalLabelActive: { color: COLORS.primary, fontFamily: FONTS.bold },
+
   termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm, marginBottom: SPACING.xl },
   checkbox: {
     width: 22,
@@ -194,6 +165,16 @@ const styles = StyleSheet.create({
   signupBtn: { borderRadius: RADIUS.button, overflow: 'hidden', marginBottom: SPACING.xl },
   signupGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16 },
   signupBtnText: { fontFamily: FONTS.bold, fontSize: 16, color: '#fff' },
+  divRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.xl },
+  divLine: { flex: 1, height: 1, backgroundColor: COLORS.border },
+  divText: { fontFamily: FONTS.regular, fontSize: 13, color: COLORS.textMuted, marginHorizontal: 12 },
+  socialBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.button,
+    borderWidth: 1.5, borderColor: COLORS.border,
+    paddingVertical: 14, marginBottom: SPACING.md,
+  },
+  socialText: { fontFamily: FONTS.bold, fontSize: 14, color: COLORS.textDark, marginLeft: 10 },
   loginRow: { flexDirection: 'row', justifyContent: 'center' },
   loginText: { fontFamily: FONTS.regular, fontSize: 14, color: COLORS.textMuted },
   loginLink: { fontFamily: FONTS.bold, fontSize: 14, color: COLORS.primary },

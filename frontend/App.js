@@ -21,10 +21,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
 // ─── Auth ──────────────────────────────────────────────────────────────
-import SplashScreen     from './src/screens/auth/SplashScreen';
-import OnboardingScreen from './src/screens/auth/OnboardingScreen';
-import LoginScreen      from './src/screens/auth/LoginScreen';
-import SignupScreen     from './src/screens/auth/SignupScreen';
+import SplashScreen      from './src/screens/auth/SplashScreen';
+import IntroScreen       from './src/screens/auth/IntroScreen';
+import AuthLandingScreen from './src/screens/auth/AuthLandingScreen';
+import SetupFlowScreen   from './src/screens/auth/SetupFlowScreen';
+import LoginScreen       from './src/screens/auth/LoginScreen';
+import SignupScreen      from './src/screens/auth/SignupScreen';
 
 // ─── Home ──────────────────────────────────────────────────────────────
 import HomeScreen from './src/screens/home/HomeScreen';
@@ -94,10 +96,12 @@ const WEB_SAFE_STACK_OPTS = Platform.OS === 'web'
 function Auth() {
   return (
     <AuthStack.Navigator screenOptions={WEB_SAFE_STACK_OPTS}>
-      <AuthStack.Screen name="Splash"     component={SplashScreen} />
-      <AuthStack.Screen name="Onboarding" component={OnboardingScreen} />
-      <AuthStack.Screen name="Login"      component={LoginScreen} />
-      <AuthStack.Screen name="Signup"     component={SignupScreen} />
+      <AuthStack.Screen name="Splash"      component={SplashScreen} />
+      <AuthStack.Screen name="Intro"       component={IntroScreen} />
+      <AuthStack.Screen name="AuthLanding" component={AuthLandingScreen} />
+      <AuthStack.Screen name="Login"       component={LoginScreen} />
+      <AuthStack.Screen name="Signup"      component={SignupScreen} />
+      <AuthStack.Screen name="SetupFlow"   component={SetupFlowScreen} />
     </AuthStack.Navigator>
   );
 }

@@ -16,11 +16,11 @@ import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 /* Badge definitions */
 const BADGE_DEFS = [
-  { id: 'streak7', icon: 'medal-outline', label: '7-Day Streak', color: COLORS.primary, unlocked: (u) => u.streak >= 7 },
+  { id: 'streak7', icon: 'medal-outline', label: '7-Day Streak', color: COLORS.primary, unlocked: (u) => u?.streak >= 7 },
   { id: 'hydro', icon: 'water-outline', label: 'Hydration Hero', color: COLORS.secondary, unlocked: (_, __, m) => m.todayMetrics.water >= 2.5 },
   { id: 'w10', icon: 'barbell-outline', label: '10 Workouts', color: '#6C8FC7', unlocked: (_, logs) => logs.length >= 10 },
   { id: 'hyrox', icon: 'stopwatch-outline', label: 'Hyrox Starter', color: '#F5A623', unlocked: (_, __, _m, hyrox) => hyrox.length > 0 },
-  { id: 'streak30', icon: 'trophy-outline', label: '30-Day Streak', color: '#FFD700', unlocked: (u) => u.streak >= 30 },
+  { id: 'streak30', icon: 'trophy-outline', label: '30-Day Streak', color: '#FFD700', unlocked: (u) => u?.streak >= 30 },
   { id: 'sleep8', icon: 'moon-outline', label: 'Sleep Master', color: '#6C8FC7', unlocked: (_, __, m) => m.todayMetrics.sleep >= 8 },
 ];
 
