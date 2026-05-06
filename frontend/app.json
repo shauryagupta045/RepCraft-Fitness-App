@@ -26,7 +26,8 @@
       "output": "single",
       "jsEngine": "jsc"
     },
-    "plugins": ["expo-font"],
+    "scheme": "repcraft2",
+    "plugins": ["expo-font", "expo-apple-authentication"],
     "newArchEnabled": true
   }
 }

@@ -10,8 +10,8 @@ import { useAuthStore } from '../../store/authStore';
 import { useWorkoutStore } from '../../store/workoutStore';
 import { useDietStore } from '../../store/dietStore';
 import { useMetricsStore } from '../../store/metricsStore';
-import { InsightCard } from '../../components/ai/AIComponents';
-import { generateWorkoutPlan, generateDietPlan, analyzeProgress, optimizeRoutine } from '../../services/ai/geminiService';
+import { InsightCard } from '../../components/ai_coach/AIComponents';
+import { generateWorkoutPlan, generateDietPlan, analyzeProgress, optimizeRoutine } from '../../services/ai_service/geminiService';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 // ─── Generating Screen ────────────────────────────────────────────────────────

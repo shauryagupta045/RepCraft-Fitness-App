@@ -1,32 +1,155 @@
-/**
- * LoginScreen — Stitch-accurate
- * Coral-to-teal gradient hero, clean white form below
- */
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform, useWindowDimensions,
+  ActivityIndicator, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/authStore';
 import { COLORS, FONTS, RADIUS, SPACING, SHADOWS } from '../../constants/theme';
+import CountryPicker from '../../components/common/CountryPicker';
+import { auth } from '../../services/firebase';
+import { 
+  signInWithPhoneNumber,
+  PhoneAuthProvider,
+  signInWithCredential,
+  GoogleAuthProvider,
+  OAuthProvider
+} from 'firebase/auth';
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+import * as Google from 'expo-auth-session/providers/google';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 
 export default function LoginScreen({ navigation }) {
   const { height } = useWindowDimensions();
-  const { login } = useAuthStore();
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [showPw, setShowPw]     = useState(false);
-  const [error, setError]       = useState('');
+  const { setUser } = useAuthStore();
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [country, setCountry] = useState({ name: 'India', code: '+91', flag: '🇮🇳' });
+  const [otp, setOtp] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const recaptchaVerifier = useRef(null);
 
-  const handleLogin = () => {
-    if (!email.trim() || !password.trim()) {
-      setError('Please enter your email and password.');
+  // Google Sign-In Setup
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+  });
+
+  React.useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      const credential = GoogleAuthProvider.credential(id_token);
+      setLoading(true);
+      signInWithCredential(auth, credential)
+        .then((result) => {
+          setUser(result.user);
+          navigation.navigate('SetupFlow');
+        })
+        .catch((err) => {
+          console.error('Google Sign-In Error:', err);
+          setError('Google Sign-In failed. Please try again.');
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [response]);
+
+  const handleAppleLogin = async () => {
+    try {
+      const nonce = Math.random().toString(36).substring(2, 10);
+      const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, nonce);
+      
+      const appleCredential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce: hashedNonce,
+      });
+
+      const { identityToken } = appleCredential;
+      const provider = new OAuthProvider('apple.com');
+      const credential = provider.credential({
+        idToken: identityToken,
+        rawNonce: nonce,
+      });
+
+      setLoading(true);
+      const result = await signInWithCredential(auth, credential);
+      setUser(result.user);
+      navigation.navigate('SetupFlow');
+    } catch (err) {
+      if (err.code === 'ERR_CANCELED') {
+        // user cancelled the login flow
+      } else {
+        console.error('Apple Sign-In Error:', err);
+        setError('Apple Sign-In failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    promptAsync();
+  };
+
+  const handleSendOtp = async () => {
+    if (!phoneNumber.trim() || phoneNumber.length < 10) {
+      setError('Please enter a valid phone number.');
       return;
     }
-    navigation.navigate('SetupFlow');
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      const fullPhone = `${country.code}${phoneNumber}`;
+      const confirmation = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifier.current);
+      setConfirmationResult(confirmation);
+      Alert.alert('Success', 'OTP sent to your phone!');
+    } catch (err) {
+      console.error('Send OTP Error:', err);
+      setError(err.message || 'Failed to send OTP. Try again.');
+      Alert.alert('Error', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp || otp.length < 6) {
+      setError('Please enter the 6-digit OTP.');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      const result = await confirmationResult.confirm(otp);
+      setUser(result.user);
+      navigation.navigate('SetupFlow');
+    } catch (err) {
+      console.error('Verify OTP Error:', err);
+      setError('Invalid or expired OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSocialLogin = (provider) => {
+    if (provider === 'Google') {
+      handleGoogleLogin();
+    } else if (provider === 'Apple') {
+      handleAppleLogin();
+    }
   };
 
   return (
@@ -34,6 +157,12 @@ export default function LoginScreen({ navigation }) {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <FirebaseRecaptchaVerifierModal
+        ref={recaptchaVerifier}
+        firebaseConfig={auth.app.options}
+        attemptInvisibleRetries={3}
+      />
+
       <ScrollView
         style={s.scroll}
         bounces={false}
@@ -47,7 +176,6 @@ export default function LoginScreen({ navigation }) {
           end={{ x: 1, y: 1 }}
           style={[s.hero, { height: height * 0.34 }]}
         >
-          {/* Deco circles */}
           <View style={[s.deco, { width: 160, height: 160, top: -50, right: -50 }]} />
           <View style={[s.deco, { width: 100, height: 100, bottom: -20, left: -30 }]} />
 
@@ -60,77 +188,98 @@ export default function LoginScreen({ navigation }) {
           </View>
         </LinearGradient>
 
-        {/* ── Form card ── */}
         <View style={s.form}>
           <Text style={s.heading}>Welcome Back</Text>
-          <Text style={s.sub}>Sign in to continue your journey</Text>
+          <Text style={s.sub}>
+            {confirmationResult ? 'Enter the code sent to your phone' : 'Sign in with your phone number to continue'}
+          </Text>
 
-          {/* Email */}
-          <View style={s.inputWrap}>
-            <Ionicons name="mail-outline" size={18} color={COLORS.textMuted} style={s.inputIcon} />
-            <TextInput
-              style={s.input}
-              placeholder="Email address"
-              placeholderTextColor={COLORS.textMuted}
-              value={email}
-              onChangeText={v => { setEmail(v); setError(''); }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          {/* Password */}
-          <View style={s.inputWrap}>
-            <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={s.inputIcon} />
-            <TextInput
-              style={[s.input, { flex: 1 }]}
-              placeholder="Password"
-              placeholderTextColor={COLORS.textMuted}
-              value={password}
-              onChangeText={v => { setPassword(v); setError(''); }}
-              secureTextEntry={!showPw}
-            />
-            <TouchableOpacity onPress={() => setShowPw(p => !p)} style={s.eyeBtn}>
-              <Ionicons name={showPw ? 'eye-outline' : 'eye-off-outline'} size={18} color={COLORS.textMuted} />
-            </TouchableOpacity>
-          </View>
+          {!confirmationResult ? (
+            <>
+              <Text style={s.label}>Phone Number</Text>
+              <View style={s.phoneInputRow}>
+                <CountryPicker 
+                  selectedCountry={country} 
+                  onSelect={setCountry} 
+                />
+                <View style={s.inputWrap}>
+                  <TextInput
+                    style={s.input}
+                    placeholder="Phone number"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={phoneNumber}
+                    onChangeText={v => { setPhoneNumber(v); setError(''); }}
+                    keyboardType="phone-pad"
+                    autoCapitalize="none"
+                  />
+                </View>
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={s.label}>Verification Code</Text>
+              <View style={s.inputWrap}>
+                <Ionicons name="shield-checkmark-outline" size={18} color={COLORS.textMuted} style={s.inputIcon} />
+                <TextInput
+                  style={s.input}
+                  placeholder="6-digit OTP"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={otp}
+                  onChangeText={v => { setOtp(v); setError(''); }}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+              </View>
+              <TouchableOpacity onPress={() => setConfirmationResult(null)}>
+                <Text style={s.resendText}>Change Phone Number</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           {error ? <Text style={s.errorText}>{error}</Text> : null}
 
-          <TouchableOpacity style={s.forgot}>
-            <Text style={s.forgotText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
           {/* Login CTA */}
-          <TouchableOpacity onPress={handleLogin} activeOpacity={0.88} style={s.cta}>
+          <TouchableOpacity 
+            onPress={confirmationResult ? handleVerifyOtp : handleSendOtp} 
+            activeOpacity={0.88} 
+            style={s.cta}
+            disabled={loading}
+          >
             <LinearGradient
               colors={[COLORS.primary, '#D96055']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={s.ctaGrad}
             >
-              <Text style={s.ctaText}>Sign In</Text>
-              <Ionicons name="arrow-forward" size={18} color="#fff" />
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Text style={s.ctaText}>{confirmationResult ? 'Verify OTP' : 'Send Code'}</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#fff" />
+                </>
+              )}
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Divider */}
-          <View style={s.divRow}>
-            <View style={s.divLine} />
-            <Text style={s.divText}>or</Text>
-            <View style={s.divLine} />
-          </View>
+          {!confirmationResult && (
+            <>
+              <View style={s.divRow}>
+                <View style={s.divLine} />
+                <Text style={s.divText}>or</Text>
+                <View style={s.divLine} />
+              </View>
 
-          {/* Google */}
-          <TouchableOpacity style={[s.socialBtn, SHADOWS.card]} onPress={handleLogin}>
-            <Ionicons name="logo-google" size={18} color={COLORS.textDark} />
-            <Text style={s.socialText}>Continue with Google</Text>
-          </TouchableOpacity>
+              <TouchableOpacity style={[s.socialBtn, SHADOWS.card]} onPress={() => handleSocialLogin('Google')} disabled={loading}>
+                <Ionicons name="logo-google" size={18} color={COLORS.textDark} />
+                <Text style={s.socialText}>Continue with Google</Text>
+              </TouchableOpacity>
 
-          {/* Facebook */}
-          <TouchableOpacity style={[s.socialBtn, SHADOWS.card, { marginBottom: SPACING.xl }]} onPress={handleLogin}>
-            <Ionicons name="logo-facebook" size={18} color="#1877F2" />
-            <Text style={s.socialText}>Continue with Facebook</Text>
-          </TouchableOpacity>
+              <TouchableOpacity style={[s.socialBtn, SHADOWS.card, { marginBottom: SPACING.xl }]} onPress={() => handleSocialLogin('Apple')} disabled={loading}>
+                <Ionicons name="logo-apple" size={18} color={COLORS.textDark} />
+                <Text style={s.socialText}>Continue with Apple</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           <View style={s.signupRow}>
             <Text style={s.signupPrompt}>New to RepCraft? </Text>
@@ -167,11 +316,23 @@ const s = StyleSheet.create({
   },
   heading: { fontFamily: FONTS.black, fontSize: 26, color: COLORS.textDark, marginBottom: 4 },
   sub: { fontFamily: FONTS.regular, fontSize: 14, color: COLORS.textMuted, marginBottom: SPACING.xl },
+  label: {
+    fontFamily: FONTS.medium,
+    fontSize: 13,
+    color: COLORS.textDark,
+    marginBottom: 6,
+  },
+  phoneInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
   inputWrap: {
+    flex: 1,
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.surface, borderRadius: RADIUS.input,
     borderWidth: 1.5, borderColor: COLORS.border,
-    paddingHorizontal: SPACING.md, marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
     ...SHADOWS.card,
   },
   inputIcon: { marginRight: SPACING.sm },
@@ -179,13 +340,11 @@ const s = StyleSheet.create({
     flex: 1, fontFamily: FONTS.regular, fontSize: 15,
     color: COLORS.textDark, paddingVertical: 14,
   },
-  eyeBtn: { padding: 4 },
+  resendText: { fontFamily: FONTS.medium, fontSize: 13, color: COLORS.primary, marginBottom: SPACING.xl, textAlign: 'right' },
   errorText: {
     fontFamily: FONTS.regular, fontSize: 13, color: COLORS.danger,
     marginTop: -6, marginBottom: SPACING.sm, marginLeft: 2,
   },
-  forgot: { alignSelf: 'flex-end', marginBottom: SPACING.xl },
-  forgotText: { fontFamily: FONTS.medium, fontSize: 13, color: COLORS.primary },
   cta: { borderRadius: RADIUS.button, overflow: 'hidden', marginBottom: SPACING.xl },
   ctaGrad: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -199,7 +358,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     backgroundColor: COLORS.surface, borderRadius: RADIUS.button,
     borderWidth: 1.5, borderColor: COLORS.border,
-    paddingVertical: 14, marginBottom: SPACING.xl,
+    paddingVertical: 14, marginBottom: SPACING.md,
   },
   socialText: { fontFamily: FONTS.bold, fontSize: 14, color: COLORS.textDark, marginLeft: 10 },
   signupRow: { flexDirection: 'row', justifyContent: 'center' },

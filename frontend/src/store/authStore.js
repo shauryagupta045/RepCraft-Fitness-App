@@ -7,16 +7,37 @@ export const useAuthStore = create(
   persist(
     (set, get) => ({
       user: MOCK_USER,
-      isAuthenticated: true,
+      isAuthenticated: false,
       settings: {
-        units: 'metric', // 'metric' or 'imperial'
+        units: 'metric',
         notifications: {
           daily: true,
           workouts: true,
           diet: true,
         }
       },
-      login: (userData) => set({ user: { ...MOCK_USER, ...userData }, isAuthenticated: true }),
+      
+      // Called after successful Firebase Auth
+      setUser: (firebaseUser) => {
+        set({ 
+          user: { 
+            ...MOCK_USER, 
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            name: firebaseUser.displayName || 'User',
+            photoURL: firebaseUser.photoURL,
+            phoneNumber: firebaseUser.phoneNumber,
+          }, 
+          isAuthenticated: true 
+        });
+      },
+
+      login: async (phoneNumber) => {
+        // This is now just a fallback or for state updates
+        const userData = { ...MOCK_USER, phoneNumber };
+        set({ user: userData, isAuthenticated: true });
+        return { success: true };
+      },
       logout: () => set({ user: null, isAuthenticated: false }),
       updateProfile: (updates) => set((state) => ({ user: { ...state.user, ...updates } })),
       updateSettings: (newSettings) => set((state) => ({ 

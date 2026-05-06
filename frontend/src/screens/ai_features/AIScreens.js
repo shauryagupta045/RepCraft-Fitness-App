@@ -15,8 +15,8 @@ import { useAuthStore } from '../../store/authStore';
 import { useAIStore } from '../../store/aiStore';
 import { useMetricsStore } from '../../store/metricsStore';
 import { useWorkoutStore } from '../../store/workoutStore';
-import { ChatBubble, SmartReplyChips, AIActionCard, TypingIndicator } from '../../components/ai/AIComponents';
-import { sendMessageToGemini } from '../../services/ai/geminiService';
+import { ChatBubble, SmartReplyChips, AIActionCard, TypingIndicator } from '../../components/ai_coach/AIComponents';
+import { sendMessageToGemini } from '../../services/ai_service/geminiService';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 /* ─── Feature card data ──────────────────────────────────────────────────────── */

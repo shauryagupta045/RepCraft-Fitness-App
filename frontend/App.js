@@ -52,14 +52,14 @@ import {
 import ExerciseHistoryScreen from './src/screens/workout/ExerciseHistoryScreen';
 
 // ─── AI ────────────────────────────────────────────────────────────────
-import { AIHomeScreen, AIChatScreen } from './src/screens/ai/AIScreens';
+import { AIHomeScreen, AIChatScreen } from './src/screens/ai_features/AIScreens';
 import {
   WorkoutPlannerScreen,
   DietPlannerScreen,
   ProgressAnalyzerScreen,
   RoutineOptimizerScreen,
-} from './src/screens/ai/PlannerScreens';
-import FormTrackerScreen from './src/screens/ai/FormTrackerScreen';
+} from './src/screens/ai_features/PlannerScreens';
+import FormTrackerScreen from './src/screens/ai_features/FormTrackerScreen';
 
 // ─── Diet & Profile ────────────────────────────────────────────────────
 import DietScreen    from './src/screens/diet/DietScreen';
