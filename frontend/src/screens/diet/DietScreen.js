@@ -1,21 +1,20 @@
 /**
- * DietScreen — Stitch-accurate redesign
- * Macro progress rings, supplement tracker, AI diet CTA
+ * DietScreen — Redesigned to match reference image
  */
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, TextInput,
+  TouchableOpacity, TextInput, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { useDietStore } from '../../store/dietStore';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
-/* ─── Mini donut ring ────────────────────────────────────────────────────────── */
-function Ring({ size = 80, stroke = 8, pct = 0, color }) {
+/* ─── Circular Progress Ring ─────────────────────────────────────────────────── */
+function Ring({ size = 80, stroke = 8, pct = 0, color, backgroundColor = '#F0F0F0' }) {
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (Math.min(pct, 1) * circ);
@@ -23,7 +22,7 @@ function Ring({ size = 80, stroke = 8, pct = 0, color }) {
 
   return (
     <Svg width={size} height={size}>
-      <Circle cx={cx} cy={cx} r={r} stroke={color + '20'} strokeWidth={stroke} fill="none" />
+      <Circle cx={cx} cy={cx} r={r} stroke={backgroundColor} strokeWidth={stroke} fill="none" />
       <Circle
         cx={cx} cy={cx} r={r}
         stroke={color} strokeWidth={stroke} fill="none"
@@ -36,121 +35,127 @@ function Ring({ size = 80, stroke = 8, pct = 0, color }) {
   );
 }
 
-/* ─── Macro card ─────────────────────────────────────────────────────────────── */
+/* ─── Macro Card ─────────────────────────────────────────────────────────────── */
 function MacroCard({ label, current, target, color, unit = 'g' }) {
   const pct = Math.min(current / target, 1);
   return (
-    <View style={[mS.card, SHADOWS.card]}>
+    <View style={mS.card}>
       <View style={mS.ringWrap}>
-        <Ring size={70} stroke={7} pct={pct} color={color} />
-        <View style={mS.ringCenter}>
-          <Text style={[mS.ringVal, { color }]}>{current}</Text>
-          <Text style={mS.ringUnit}>{unit}</Text>
-        </View>
+        <Ring size={50} stroke={5} pct={pct} color={color} />
       </View>
+      <Text style={mS.value}>{current}/{target}{unit}</Text>
       <Text style={mS.label}>{label}</Text>
-      <Text style={mS.target}>/ {target}{unit}</Text>
     </View>
   );
 }
 
 const mS = StyleSheet.create({
   card: {
-    flex: 1, backgroundColor: COLORS.surface, borderRadius: RADIUS.card,
-    padding: SPACING.sm, alignItems: 'center', marginHorizontal: 4,
+    flex: 1, backgroundColor: '#F8F9FA', borderRadius: RADIUS.md,
+    padding: SPACING.md, alignItems: 'center', marginHorizontal: 4,
   },
-  ringWrap: { position: 'relative', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  ringCenter: { position: 'absolute', alignItems: 'center' },
-  ringVal: { fontFamily: FONTS.black, fontSize: 16, lineHeight: 18 },
-  ringUnit: { fontFamily: FONTS.regular, fontSize: 9, color: COLORS.textMuted },
-  label: { fontFamily: FONTS.bold, fontSize: 12, color: COLORS.textDark },
-  target: { fontFamily: FONTS.regular, fontSize: 10, color: COLORS.textMuted },
+  ringWrap: { marginBottom: 8 },
+  value: { fontFamily: FONTS.bold, fontSize: 13, color: COLORS.textDark },
+  label: { fontFamily: FONTS.medium, fontSize: 10, color: COLORS.textMuted, textTransform: 'uppercase' },
 });
 
-/* ─── Supplement row ─────────────────────────────────────────────────────────── */
-function SuppRow({ supp, onToggle, onDelete }) {
-  const [showDel, setShowDel] = useState(false);
+/* ─── Supplement Row ─────────────────────────────────────────────────────────── */
+function SuppRow({ supp, onToggle }) {
+  const initial = supp.name.charAt(0);
+  const iconColor = supp.name.toLowerCase().includes('whey') ? '#A0F3E3' : '#C5F3D1';
 
   return (
-    <TouchableOpacity
-      onLongPress={() => setShowDel(s => !s)}
-      onPress={() => { if (showDel) setShowDel(false); }}
-      activeOpacity={0.85}
-      style={[suppS.row, SHADOWS.card]}
-    >
-      <View style={[suppS.icon, { backgroundColor: supp.taken ? COLORS.secondary + '18' : COLORS.border }]}>
-        <Ionicons name="medical-outline" size={18} color={supp.taken ? COLORS.secondary : COLORS.textMuted} />
+    <View style={suppS.row}>
+      <View style={[suppS.icon, { backgroundColor: iconColor }]}>
+        <Text style={suppS.iconText}>{initial}</Text>
       </View>
-      <View style={{ flex: 1, marginLeft: SPACING.sm }}>
+      <View style={{ flex: 1, marginLeft: SPACING.md }}>
         <Text style={suppS.name}>{supp.name}</Text>
-        <View style={suppS.metaRow}>
-          <Ionicons name="time-outline" size={11} color={COLORS.textMuted} />
-          <Text style={suppS.meta}>{supp.time}</Text>
-          {supp.dose ? <Text style={suppS.meta}> · {supp.dose}</Text> : null}
-        </View>
+        <Text style={suppS.meta}>{supp.dose} • {supp.time}</Text>
       </View>
-      {showDel && (
-        <TouchableOpacity onPress={onDelete} style={suppS.delBtn}>
-          <Ionicons name="trash-outline" size={17} color={COLORS.danger} />
-        </TouchableOpacity>
-      )}
-      <TouchableOpacity onPress={onToggle} style={{ padding: 4 }}>
-        <Ionicons
-          name={supp.taken ? 'checkmark-circle' : 'radio-button-off-outline'}
-          size={28}
-          color={supp.taken ? COLORS.secondary : COLORS.border}
-        />
-      </TouchableOpacity>
-    </TouchableOpacity>
+      <Switch
+        value={supp.taken}
+        onValueChange={onToggle}
+        trackColor={{ false: '#E0E0E0', true: COLORS.primary }}
+        thumbColor="#fff"
+      />
+    </View>
   );
 }
 
 const suppS = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.button,
+    backgroundColor: '#fff', borderRadius: RADIUS.md,
     padding: SPACING.md, marginBottom: SPACING.sm,
+    ...SHADOWS.sm,
   },
-  icon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  name: { fontFamily: FONTS.bold, fontSize: 14, color: COLORS.textDark },
-  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  meta: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.textMuted, marginLeft: 3 },
-  delBtn: { padding: 8, marginRight: 4 },
+  icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  iconText: { fontFamily: FONTS.bold, fontSize: 18, color: COLORS.textDark },
+  name: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.textDark },
+  meta: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+});
+
+/* ─── Meal Log Row ───────────────────────────────────────────────────────────── */
+function MealRow({ meal }) {
+  return (
+    <TouchableOpacity style={mealS.row} activeOpacity={0.7}>
+      <View style={{ flex: 1 }}>
+        <Text style={mealS.name}>{meal.name}</Text>
+        <Text style={mealS.meta}>{meal.weight} • {meal.calories} Kcal • {meal.protein}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={COLORS.textLight} />
+    </TouchableOpacity>
+  );
+}
+
+const mealS = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff', borderRadius: RADIUS.md,
+    padding: SPACING.md, marginBottom: SPACING.sm,
+    ...SHADOWS.sm,
+  },
+  name: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.textDark },
+  meta: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
 });
 
 /* ─── Main DietScreen ────────────────────────────────────────────────────────── */
-export default function DietScreen({ navigation }) {
-  const { targets, supplements, updateTargets, toggleSupplement, deleteSupplement, addSupplement } = useDietStore();
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { loadFoodLog, loadUserProfile, getDateKey, loadSupplements, toggleSupplement } from '../../store/nutritionStore';
 
-  const [editMode,    setEditMode]    = useState(false);
-  const [showAddSupp, setShowAddSupp] = useState(false);
-  const [newCal,  setNewCal]  = useState(String(targets.calories));
-  const [newProt, setNewProt] = useState(String(targets.protein));
-  const [newFat,  setNewFat]  = useState(String(targets.fat));
-  const [newCarb, setNewCarb] = useState(String(targets.carbs));
-  const [suppName, setSuppName] = useState('');
-  const [suppTime, setSuppTime] = useState('08:00');
-  const [suppDose, setSuppDose] = useState('');
+export default function DietScreen() {
+  const navigation = useNavigation();
+  const [log, setLog] = useState({ totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0, totalFiber: 0, meals: [] });
+  const [targets, setTargets] = useState({ calories: 2000, protein: 150, carbs: 250, fat: 65, fiber: 30 });
+  const [supplements, setSupplements] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const taken = supplements.filter(s => s.taken).length;
-  const calPct = Math.min(targets.currentCalories / targets.calories, 1);
+  useFocusEffect(
+    React.useCallback(() => {
+      const load = async () => {
+        const [p, l, sData] = await Promise.all([
+          loadUserProfile(), 
+          loadFoodLog(getDateKey()),
+          loadSupplements()
+        ]);
+        setTargets(p.targets || targets);
+        setLog(l);
+        setSupplements(sData);
+        setLoading(false);
+      };
+      load();
+    }, [])
+  );
 
-  const saveTargets = () => {
-    updateTargets({
-      calories: parseInt(newCal) || targets.calories,
-      protein:  parseInt(newProt) || targets.protein,
-      fat:      parseInt(newFat)  || targets.fat,
-      carbs:    parseInt(newCarb) || targets.carbs,
-    });
-    setEditMode(false);
+  const handleToggleSupp = async (id) => {
+    const updated = await toggleSupplement(id);
+    if (updated) setSupplements(updated);
   };
 
-  const addSupp = () => {
-    if (!suppName.trim()) return;
-    addSupplement({ name: suppName, time: suppTime, dose: suppDose });
-    setSuppName(''); setSuppDose('');
-    setShowAddSupp(false);
-  };
+  const kcalLeft = targets.calories - log.totalCalories;
+  const calPct = Math.min(log.totalCalories / targets.calories, 1);
+  const remainingSupps = supplements.filter(s => !s.taken).length;
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -158,154 +163,76 @@ export default function DietScreen({ navigation }) {
 
         {/* ── Header ── */}
         <View style={s.header}>
-          <Text style={s.title}>Nutrition</Text>
-          <TouchableOpacity
-            style={s.editBtn}
-            onPress={() => setEditMode(e => !e)}
+          <View>
+            <Text style={s.subHeader}>NUTRITION OVERVIEW</Text>
+            <View style={s.titleRow}>
+              <Text style={s.title}>Diet</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('UpdateTargets')}>
+                <MaterialCommunityIcons name="pencil-outline" size={22} color={COLORS.textMuted} style={{ marginLeft: 8 }} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* ── Main Calorie Card ── */}
+        <View style={s.calCard}>
+          <View style={s.calRingWrap}>
+            <Ring size={180} stroke={16} pct={calPct} color={COLORS.primary} backgroundColor="#F0F0F0" />
+            <View style={s.calCenterText}>
+              <Text style={s.kcalNum}>{kcalLeft.toLocaleString()}</Text>
+              <Text style={s.kcalLabel}>KCAL LEFT</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ── Macro Rows ── */}
+        <View style={s.macroRow}>
+          <MacroCard label="Protein" current={log.totalProtein} target={targets.protein} color="#14726B" />
+          <MacroCard label="Carbs" current={log.totalCarbs} target={targets.carbs} color="#4A6563" />
+          <MacroCard label="Fiber" current={log.totalFiber} target={targets.fiber} color="#A84C42" />
+        </View>
+
+        {/* ── Action Buttons ── */}
+        <View style={s.actionRow}>
+          <TouchableOpacity style={s.actionBtn} onPress={() => navigation.navigate('LogFood', { mealType: 'Lunch' })}>
+            <Ionicons name="add" size={20} color={COLORS.primary} />
+            <Text style={s.actionBtnText}>LOG FOOD</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[s.actionBtn, { backgroundColor: '#FDE2E0', borderColor: 'transparent' }]}
+            onPress={() => navigation.navigate('Scanner')}
           >
-            <Ionicons name={editMode ? 'close' : 'create-outline'} size={18} color={COLORS.primary} />
-            <Text style={s.editBtnText}>{editMode ? 'Cancel' : 'Edit Goals'}</Text>
+            <MaterialCommunityIcons name="barcode-scan" size={18} color="#A84C42" />
+            <Text style={[s.actionBtnText, { color: '#A84C42', marginLeft: 8 }]}>SCAN PACKET</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ── Calories overview card ── */}
-        <View style={[s.calCard, SHADOWS.md]}>
-          <LinearGradient
-            colors={[COLORS.primary, '#D96055']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={s.calBanner}
-          >
-            <View>
-              <Text style={s.calBannerLabel}>TODAY'S CALORIES</Text>
-              <Text style={s.calBannerNum}>{targets.currentCalories.toLocaleString()}</Text>
-              <Text style={s.calBannerSub}>of {targets.calories.toLocaleString()} kcal goal</Text>
-            </View>
-            <View style={s.calCircle}>
-              <Text style={s.calCirclePct}>{Math.round(calPct * 100)}%</Text>
-            </View>
-          </LinearGradient>
-          {/* Progress track */}
-          <View style={s.calTrack}>
-            <View style={[s.calFill, { width: `${Math.round(calPct * 100)}%` }]} />
-          </View>
-        </View>
-
-        {/* ── Macro rings ── */}
-        <Text style={s.sectionTitle}>Macros</Text>
-        <View style={s.macroRow}>
-          <MacroCard label="Protein"  current={targets.currentProtein} target={targets.protein}  color={COLORS.primary}   unit="g" />
-          <MacroCard label="Carbs"    current={targets.currentCarbs}   target={targets.carbs}    color={COLORS.secondary} unit="g" />
-          <MacroCard label="Fat"      current={targets.currentFat}     target={targets.fat}      color="#6C8FC7"          unit="g" />
-        </View>
-
-        {/* ── Edit targets ── */}
-        {editMode && (
-          <View style={[s.editCard, SHADOWS.card]}>
-            <Text style={s.editCardTitle}>Update Daily Targets</Text>
-            <View style={s.editGrid}>
-              {[
-                { label: 'Calories', val: newCal, set: setNewCal },
-                { label: 'Protein g', val: newProt, set: setNewProt },
-                { label: 'Fat g', val: newFat,  set: setNewFat },
-                { label: 'Carbs g', val: newCarb, set: setNewCarb },
-              ].map(f => (
-                <View key={f.label} style={s.editField}>
-                  <Text style={s.editLabel}>{f.label}</Text>
-                  <TextInput
-                    style={s.editInput}
-                    value={f.val}
-                    onChangeText={f.set}
-                    keyboardType="number-pad"
-                  />
-                </View>
-              ))}
-            </View>
-            <TouchableOpacity onPress={saveTargets} style={s.saveBtn}>
-              <LinearGradient colors={[COLORS.primary, '#D96055']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.saveGrad}>
-                <Text style={s.saveText}>Save Goals</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        )}
+        <TouchableOpacity style={s.updateBtn} onPress={() => navigation.navigate('UpdateTargets')}>
+          <Ionicons name="reload" size={16} color={COLORS.textMuted} />
+          <Text style={s.updateBtnText}>UPDATE TARGETS</Text>
+        </TouchableOpacity>
 
         {/* ── Supplements ── */}
-        <View style={s.suppHeader}>
-          <View>
-            <Text style={s.sectionTitle}>Supplements</Text>
-            <Text style={s.suppProgress}>{taken} of {supplements.length} taken today</Text>
+        <View style={s.sectionHeader}>
+          <Text style={s.sectionTitle}>Today's Supplements</Text>
+          <View style={s.badge}>
+            <Text style={s.badgeText}>{remainingSupps} REMAINING</Text>
           </View>
-          <TouchableOpacity onPress={() => setShowAddSupp(a => !a)} style={s.addSuppBtn}>
-            <Ionicons name="add-circle" size={26} color={COLORS.primary} />
-          </TouchableOpacity>
         </View>
-
-        {/* Supplement progress bar */}
-        <View style={s.suppTrack}>
-          <View style={[s.suppFill, { width: supplements.length ? `${(taken / supplements.length) * 100}%` : '0%' }]} />
-        </View>
-
-        {supplements.map(s => (
-          <SuppRow
-            key={s.id}
-            supp={s}
-            onToggle={() => toggleSupplement(s.id)}
-            onDelete={() => deleteSupplement(s.id)}
-          />
+        {supplements.slice(0, 3).map(supp => (
+          <SuppRow key={supp.id} supp={supp} onToggle={() => handleToggleSupp(supp.id)} />
         ))}
 
-        {/* Add supplement form */}
-        {showAddSupp && (
-          <View style={[s.addSuppCard, SHADOWS.card]}>
-            <Text style={s.addSuppTitle}>Add Supplement</Text>
-            <TextInput
-              style={s.addSuppInput}
-              value={suppName}
-              onChangeText={setSuppName}
-              placeholder="Name (e.g. Creatine)"
-              placeholderTextColor={COLORS.textMuted}
-            />
-            <View style={{ flexDirection: 'row' }}>
-              <TextInput
-                style={[s.addSuppInput, { flex: 1, marginRight: SPACING.sm }]}
-                value={suppTime}
-                onChangeText={setSuppTime}
-                placeholder="08:00"
-                placeholderTextColor={COLORS.textMuted}
-              />
-              <TextInput
-                style={[s.addSuppInput, { flex: 1 }]}
-                value={suppDose}
-                onChangeText={setSuppDose}
-                placeholder="Dose (e.g. 5g)"
-                placeholderTextColor={COLORS.textMuted}
-              />
-            </View>
-            <TouchableOpacity onPress={addSupp} style={s.saveBtn}>
-              <LinearGradient colors={[COLORS.secondary, '#3BBBB2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.saveGrad}>
-                <Ionicons name="add-outline" size={16} color="#fff" />
-                <Text style={s.saveText}>Add Supplement</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* ── AI diet CTA ── */}
-        <TouchableOpacity
-          style={[s.aiCta, SHADOWS.card]}
-          onPress={() => navigation.navigate('AI', { screen: 'DietPlanner' })}
-          activeOpacity={0.88}
-        >
-          <View style={s.aiCtaLeft}>
-            <View style={s.aiCtaIcon}>
-              <Ionicons name="nutrition-outline" size={22} color={COLORS.secondary} />
-            </View>
-            <View>
-              <Text style={s.aiCtaTitle}>Plan Diet with AI</Text>
-              <Text style={s.aiCtaSub}>Get personalised macro targets</Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
-        </TouchableOpacity>
+        {/* ── Meal Log ── */}
+        <View style={s.sectionHeader}>
+          <Text style={s.sectionTitle}>Today's Meal Log</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('FoodDiary')}>
+            <Text style={s.seeAll}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        {log.meals.slice(0, 3).map(meal => (
+          <MealRow key={meal.id} meal={{ name: meal.foodName, weight: `${meal.grams}g`, calories: meal.calories, protein: `${meal.protein}g P` }} />
+        ))}
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -314,89 +241,46 @@ export default function DietScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
   scroll: { padding: SPACING.lg },
-  header: {
+  header: { marginBottom: SPACING.lg },
+  subHeader: { fontFamily: FONTS.medium, fontSize: 11, color: COLORS.textMuted, letterSpacing: 0.5 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  title: { fontFamily: FONTS.black, fontSize: 32, color: COLORS.textDark },
+
+  calCard: {
+    backgroundColor: '#fff', borderRadius: RADIUS.lg,
+    padding: SPACING.xl, alignItems: 'center', justifyContent: 'center',
+    marginBottom: SPACING.lg, ...SHADOWS.md,
+  },
+  calRingWrap: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  calCenterText: { position: 'absolute', alignItems: 'center' },
+  kcalNum: { fontFamily: FONTS.black, fontSize: 36, color: COLORS.textDark },
+  kcalLabel: { fontFamily: FONTS.bold, fontSize: 12, color: COLORS.textMuted, marginTop: -4 },
+
+  macroRow: { flexDirection: 'row', marginBottom: SPACING.lg },
+
+  actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.md },
+  actionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#E0E0E0',
+    borderRadius: RADIUS.md, paddingVertical: 14, marginHorizontal: 4,
+  },
+  actionBtnText: { fontFamily: FONTS.bold, fontSize: 13, color: COLORS.textDark, marginLeft: 4 },
+
+  updateBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#F3F4F6', borderRadius: RADIUS.md, paddingVertical: 12,
+    marginBottom: SPACING.xl,
+  },
+  updateBtnText: { fontFamily: FONTS.bold, fontSize: 12, color: COLORS.textMuted, marginLeft: 8, textTransform: 'uppercase' },
+
+  sectionHeader: {
     flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: SPACING.lg,
+    alignItems: 'center', marginBottom: SPACING.md,
   },
-  title: { fontFamily: FONTS.black, fontSize: 26, color: COLORS.textDark },
-  editBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.primary + '14',
-    borderRadius: RADIUS.pill, paddingHorizontal: 12, paddingVertical: 7,
-  },
-  editBtnText: { fontFamily: FONTS.medium, fontSize: 13, color: COLORS.primary, marginLeft: 5 },
-
-  calCard: { borderRadius: RADIUS.card, overflow: 'hidden', marginBottom: SPACING.lg },
-  calBanner: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', padding: SPACING.lg,
-  },
-  calBannerLabel: { fontFamily: FONTS.medium, fontSize: 10, color: 'rgba(255,255,255,0.75)', letterSpacing: 1.2, marginBottom: 4 },
-  calBannerNum: { fontFamily: FONTS.black, fontSize: 40, color: '#fff', letterSpacing: -1 },
-  calBannerSub: { fontFamily: FONTS.regular, fontSize: 13, color: 'rgba(255,255,255,0.75)' },
-  calCircle: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: 'rgba(255,255,255,0.20)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  calCirclePct: { fontFamily: FONTS.black, fontSize: 20, color: '#fff' },
-  calTrack: { height: 5, backgroundColor: COLORS.primary + '30' },
-  calFill: { height: 5, backgroundColor: '#fff', opacity: 0.6 },
-
-  sectionTitle: { fontFamily: FONTS.bold, fontSize: 16, color: COLORS.textDark, marginBottom: SPACING.md },
-  macroRow: { flexDirection: 'row', marginBottom: SPACING.xl },
-
-  editCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.card, padding: SPACING.lg, marginBottom: SPACING.lg },
-  editCardTitle: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.textDark, marginBottom: SPACING.md },
-  editGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  editField: { width: '48%', marginRight: '2%', marginBottom: SPACING.sm },
-  editLabel: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.textMuted, marginBottom: 5 },
-  editInput: {
-    borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.input,
-    backgroundColor: COLORS.background, padding: 10,
-    fontFamily: FONTS.bold, fontSize: 16, color: COLORS.textDark, textAlign: 'center',
-  },
-
-  suppHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'flex-start', marginBottom: SPACING.sm,
-  },
-  suppProgress: { fontFamily: FONTS.regular, fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
-  addSuppBtn: { padding: 4 },
-  suppTrack: {
-    height: 5, backgroundColor: COLORS.border, borderRadius: 3,
-    overflow: 'hidden', marginBottom: SPACING.md,
-  },
-  suppFill: { height: 5, backgroundColor: COLORS.secondary, borderRadius: 3 },
-
-  addSuppCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.card, padding: SPACING.lg, marginBottom: SPACING.lg },
-  addSuppTitle: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.textDark, marginBottom: SPACING.md },
-  addSuppInput: {
-    borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.input,
-    backgroundColor: COLORS.background, padding: 12,
-    fontFamily: FONTS.regular, fontSize: 15, color: COLORS.textDark, marginBottom: SPACING.sm,
-  },
-
-  saveBtn: { borderRadius: RADIUS.button, overflow: 'hidden', marginTop: SPACING.sm },
-  saveGrad: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', paddingVertical: 13,
-  },
-  saveText: { fontFamily: FONTS.bold, fontSize: 15, color: '#fff', marginLeft: 6 },
-
-  aiCta: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.card,
-    padding: SPACING.lg, marginTop: SPACING.md,
-  },
-  aiCtaLeft: { flexDirection: 'row', alignItems: 'center' },
-  aiCtaIcon: {
-    width: 44, height: 44, borderRadius: 12,
-    backgroundColor: COLORS.secondary + '18',
-    alignItems: 'center', justifyContent: 'center', marginRight: SPACING.md,
-  },
-  aiCtaTitle: { fontFamily: FONTS.bold, fontSize: 14, color: COLORS.textDark },
-  aiCtaSub: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  sectionTitle: { fontFamily: FONTS.bold, fontSize: 18, color: COLORS.textDark },
+  badge: { backgroundColor: '#FDE2E0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.sm },
+  badgeText: { fontFamily: FONTS.bold, fontSize: 10, color: '#A84C42', textTransform: 'uppercase' },
+  seeAll: { fontFamily: FONTS.bold, fontSize: 13, color: '#A84C42' },
 });

@@ -90,7 +90,7 @@ export default function BottomTabNavigator() {
           )
         }}
       />
-      <Tab.Screen name="Diet" component={DietStack}
+      <Tab.Screen name="DietTab" component={DietStack}
         options={{ tabBarIcon: ({ focused }) => <TabIcon name="nutrition-outline" focused={focused} label="Diet" /> }} />
       <Tab.Screen name="Profile" component={ProfileStack}
         options={{ tabBarIcon: ({ focused }) => <TabIcon name="person-outline" focused={focused} label="Profile" /> }} />

@@ -106,11 +106,18 @@ export const MOCK_DIET_TARGETS = {
   protein: 180,
   fat: 70,
   carbs: 260,
+  fiber: 35,
   currentCalories: 1950,
   currentProtein: 145,
   currentFat: 58,
   currentCarbs: 210,
+  currentFiber: 22,
 };
+
+export const MOCK_MEAL_LOG = [
+  { id: 'm1', name: 'Protein Oats', weight: '350g', calories: 420, protein: '35g P' },
+  { id: 'm2', name: 'Salmon Bowl', weight: '450g', calories: 680, protein: '45g P' },
+];
 
 export const MOCK_SUPPLEMENTS = [
   { id: 's1', name: 'Creatine', time: '08:00', taken: true, dose: '5g' },

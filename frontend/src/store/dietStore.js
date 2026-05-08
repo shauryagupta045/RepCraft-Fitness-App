@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MOCK_DIET_TARGETS, MOCK_SUPPLEMENTS } from '../constants/mockData';
+import { MOCK_DIET_TARGETS, MOCK_SUPPLEMENTS, MOCK_MEAL_LOG } from '../constants/mockData';
 
 export const useDietStore = create(
   persist(
     (set) => ({
       targets: MOCK_DIET_TARGETS,
       supplements: MOCK_SUPPLEMENTS,
+      mealLog: MOCK_MEAL_LOG,
 
       updateTargets: (updates) =>
         set((state) => ({ targets: { ...state.targets, ...updates } })),
@@ -32,6 +33,14 @@ export const useDietStore = create(
           supplements: state.supplements.filter((s) => s.id !== id),
         })),
 
+      addMeal: (meal) =>
+        set((state) => ({
+          mealLog: [
+            ...state.mealLog,
+            { ...meal, id: `m${Date.now()}` },
+          ],
+        })),
+
       applyAIDietPlan: (plan) => {
         if (!plan?.dietPlan) return;
         set((state) => ({
@@ -41,6 +50,7 @@ export const useDietStore = create(
             protein: plan.dietPlan.protein || state.targets.protein,
             fat: plan.dietPlan.fat || state.targets.fat,
             carbs: plan.dietPlan.carbs || state.targets.carbs,
+            fiber: plan.dietPlan.fiber || state.targets.fiber,
           },
         }));
       },
