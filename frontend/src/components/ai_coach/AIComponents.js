@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, RADIUS, SPACING, SHADOWS } from '../../constants/theme';
@@ -191,7 +191,24 @@ const styles = StyleSheet.create({
 
   aiBubbleRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: SPACING.md, paddingHorizontal: SPACING.lg },
   aiBubbleContent: { maxWidth: '78%', marginLeft: SPACING.sm },
-  aiAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 },
+  aiAvatar: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    backgroundColor: COLORS.primary, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    ...Platform.select({
+      web: { boxShadow: '0px 2px 4px rgba(232,112,94,0.3)' },
+      default: {
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 4
+      }
+    })
+  },
   aiBubble: { backgroundColor: COLORS.surface, borderRadius: 20, borderBottomLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 12 },
   aiBubbleText: { fontFamily: FONTS.regular, fontSize: 14, color: COLORS.textDark, lineHeight: 21 },
   timeLabel: { fontFamily: FONTS.regular, fontSize: 10, color: COLORS.textMuted, marginTop: 4, marginHorizontal: 4 },

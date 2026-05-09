@@ -285,7 +285,16 @@ const s = StyleSheet.create({
     backgroundColor: COLORS.secondary,
     alignItems: 'center', justifyContent: 'center',
     marginBottom: SPACING.xl,
-    shadowColor: COLORS.secondary, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.4, shadowRadius: 20, elevation: 10,
+    ...Platform.select({
+      web: { boxShadow: '0px 10px 20px rgba(78,205,196,0.4)' },
+      default: {
+        shadowColor: COLORS.secondary,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
+        elevation: 10,
+      }
+    }),
   },
   aiBody: { fontFamily: FONTS.regular, fontSize: 18, color: COLORS.textMid, textAlign: 'center', lineHeight: 28 },
 

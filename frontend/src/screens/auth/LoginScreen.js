@@ -16,12 +16,16 @@ import {
   PhoneAuthProvider,
   signInWithCredential,
   GoogleAuthProvider,
+  FacebookAuthProvider,
   OAuthProvider
 } from 'firebase/auth';
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import * as Google from 'expo-auth-session/providers/google';
-import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Facebook from 'expo-auth-session/providers/facebook';
+import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen({ navigation }) {
   const { height } = useWindowDimensions();
@@ -42,6 +46,11 @@ export default function LoginScreen({ navigation }) {
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
   });
 
+  // Facebook Sign-In Setup
+  const [fbRequest, fbResponse, fbPromptAsync] = Facebook.useAuthRequest({
+    clientId: process.env.EXPO_PUBLIC_FACEBOOK_APP_ID,
+  });
+
   React.useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
@@ -54,46 +63,35 @@ export default function LoginScreen({ navigation }) {
         })
         .catch((err) => {
           console.error('Google Sign-In Error:', err);
-          setError('Google Sign-In failed. Please try again.');
+          setError('Google Sign-In failed. Check your Firebase/Google configuration.');
         })
         .finally(() => setLoading(false));
+    } else if (response?.type === 'error') {
+      console.error('Google Sign-In Error response:', response.error);
+      setError('Google Sign-In error: ' + (response.error?.message || 'Check your client IDs in .env'));
     }
   }, [response]);
 
-  const handleAppleLogin = async () => {
-    try {
-      const nonce = Math.random().toString(36).substring(2, 10);
-      const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, nonce);
-      
-      const appleCredential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-        nonce: hashedNonce,
-      });
-
-      const { identityToken } = appleCredential;
-      const provider = new OAuthProvider('apple.com');
-      const credential = provider.credential({
-        idToken: identityToken,
-        rawNonce: nonce,
-      });
-
+  React.useEffect(() => {
+    if (fbResponse?.type === 'success') {
+      const { access_token } = fbResponse.params;
+      const credential = FacebookAuthProvider.credential(access_token);
       setLoading(true);
-      const result = await signInWithCredential(auth, credential);
-      setUser(result.user);
-      navigation.navigate('SetupFlow');
-    } catch (err) {
-      if (err.code === 'ERR_CANCELED') {
-        // user cancelled the login flow
-      } else {
-        console.error('Apple Sign-In Error:', err);
-        setError('Apple Sign-In failed. Please try again.');
-      }
-    } finally {
-      setLoading(false);
+      signInWithCredential(auth, credential)
+        .then((result) => {
+          setUser(result.user);
+          navigation.navigate('SetupFlow');
+        })
+        .catch((err) => {
+          console.error('Facebook Sign-In Error:', err);
+          setError('Facebook Sign-In failed. Check your Firebase/Facebook configuration.');
+        })
+        .finally(() => setLoading(false));
     }
+  }, [fbResponse]);
+
+  const handleFacebookLogin = () => {
+    fbPromptAsync();
   };
 
   const handleGoogleLogin = () => {
@@ -147,8 +145,8 @@ export default function LoginScreen({ navigation }) {
   const handleSocialLogin = (provider) => {
     if (provider === 'Google') {
       handleGoogleLogin();
-    } else if (provider === 'Apple') {
-      handleAppleLogin();
+    } else if (provider === 'Facebook') {
+      handleFacebookLogin();
     }
   };
 
@@ -274,9 +272,9 @@ export default function LoginScreen({ navigation }) {
                 <Text style={s.socialText}>Continue with Google</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={[s.socialBtn, SHADOWS.card, { marginBottom: SPACING.xl }]} onPress={() => handleSocialLogin('Apple')} disabled={loading}>
-                <Ionicons name="logo-apple" size={18} color={COLORS.textDark} />
-                <Text style={s.socialText}>Continue with Apple</Text>
+              <TouchableOpacity style={[s.socialBtn, SHADOWS.card, { marginBottom: SPACING.xl }]} onPress={() => handleSocialLogin('Facebook')} disabled={loading}>
+                <Ionicons name="logo-facebook" size={18} color="#1877F2" />
+                <Text style={s.socialText}>Continue with Facebook</Text>
               </TouchableOpacity>
             </>
           )}

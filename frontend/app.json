@@ -9,7 +9,9 @@
     "splash": {
       "backgroundColor": "#1E2340"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.repcraft.app"
@@ -27,7 +29,10 @@
       "jsEngine": "jsc"
     },
     "scheme": "repcraft2",
-    "plugins": ["expo-font", "expo-apple-authentication"],
+    "plugins": [
+      "expo-font",
+      "expo-web-browser"
+    ],
     "newArchEnabled": true
   }
 }

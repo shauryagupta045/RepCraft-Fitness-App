@@ -1,8 +1,11 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
+import { Platform } from 'react-native';
 import { 
   initializeAuth, 
   getReactNativePersistence, 
+  browserLocalPersistence,
   GoogleAuthProvider, 
+  FacebookAuthProvider,
   OAuthProvider,
   getAuth
 } from 'firebase/auth';
@@ -20,12 +23,14 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Auth with persistence for React Native
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
+// Initialize Auth with persistence for React Native vs Web
+export const auth = Platform.OS === 'web' 
+  ? getAuth(app) 
+  : initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    });
 
 export const googleProvider = new GoogleAuthProvider();
-export const appleProvider = new OAuthProvider('apple.com');
+export const facebookProvider = new FacebookAuthProvider();
 
 export default app;
