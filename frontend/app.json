@@ -20,7 +20,8 @@
       "adaptiveIcon": {
         "backgroundColor": "#1E2340"
       },
-      "package": "com.repcraft.app"
+      "package": "com.repcraft.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png",

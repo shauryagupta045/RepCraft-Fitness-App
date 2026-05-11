@@ -16,13 +16,12 @@ import {
   PhoneAuthProvider,
   signInWithCredential,
   GoogleAuthProvider,
-  FacebookAuthProvider,
   OAuthProvider
 } from 'firebase/auth';
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import * as Google from 'expo-auth-session/providers/google';
-import * as Facebook from 'expo-auth-session/providers/facebook';
 import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
 import * as Crypto from 'expo-crypto';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -40,21 +39,40 @@ export default function LoginScreen({ navigation }) {
   const recaptchaVerifier = useRef(null);
 
   // Google Sign-In Setup
+  // For Expo Go (Native), use the proxy. For Web, use the default.
+  const redirectUri = makeRedirectUri({
+    useProxy: Platform.OS !== 'web',
+  });
+
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-  });
-
-  // Facebook Sign-In Setup
-  const [fbRequest, fbResponse, fbPromptAsync] = Facebook.useAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_FACEBOOK_APP_ID,
+    redirectUri: redirectUri,
   });
 
   React.useEffect(() => {
+    console.log('--- GOOGLE AUTH DEBUG ---');
+    console.log('Redirect URI:', redirectUri);
+    console.log('Web Client ID:', process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
+    console.log('-------------------------');
+  }, []);
+
+  React.useEffect(() => {
     if (response?.type === 'success') {
-      const { id_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token);
+      const { id_token, access_token } = response.params;
+      
+      // On Web, the tokens might be in response.authentication
+      const idToken = id_token || response.authentication?.idToken;
+      const accessToken = access_token || response.authentication?.accessToken;
+
+      if (!idToken && !accessToken) {
+        console.error('Google Auth Success but no tokens found:', response);
+        setError('Google Sign-In failed: No tokens received.');
+        return;
+      }
+
+      const credential = GoogleAuthProvider.credential(idToken, accessToken);
       setLoading(true);
       signInWithCredential(auth, credential)
         .then((result) => {
@@ -72,29 +90,12 @@ export default function LoginScreen({ navigation }) {
     }
   }, [response]);
 
-  React.useEffect(() => {
-    if (fbResponse?.type === 'success') {
-      const { access_token } = fbResponse.params;
-      const credential = FacebookAuthProvider.credential(access_token);
-      setLoading(true);
-      signInWithCredential(auth, credential)
-        .then((result) => {
-          setUser(result.user);
-          navigation.navigate('SetupFlow');
-        })
-        .catch((err) => {
-          console.error('Facebook Sign-In Error:', err);
-          setError('Facebook Sign-In failed. Check your Firebase/Facebook configuration.');
-        })
-        .finally(() => setLoading(false));
-    }
-  }, [fbResponse]);
-
-  const handleFacebookLogin = () => {
-    fbPromptAsync();
-  };
-
   const handleGoogleLogin = () => {
+    if (!process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID) {
+      setError('Google Web Client ID is missing in .env');
+      return;
+    }
+    console.log('Starting Google Login with Redirect URI:', redirectUri);
     promptAsync();
   };
 
@@ -145,8 +146,6 @@ export default function LoginScreen({ navigation }) {
   const handleSocialLogin = (provider) => {
     if (provider === 'Google') {
       handleGoogleLogin();
-    } else if (provider === 'Facebook') {
-      handleFacebookLogin();
     }
   };
 
@@ -267,14 +266,9 @@ export default function LoginScreen({ navigation }) {
                 <View style={s.divLine} />
               </View>
 
-              <TouchableOpacity style={[s.socialBtn, SHADOWS.card]} onPress={() => handleSocialLogin('Google')} disabled={loading}>
+              <TouchableOpacity style={[s.socialBtn, SHADOWS.card, { marginBottom: SPACING.xl }]} onPress={() => handleSocialLogin('Google')} disabled={loading}>
                 <Ionicons name="logo-google" size={18} color={COLORS.textDark} />
                 <Text style={s.socialText}>Continue with Google</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={[s.socialBtn, SHADOWS.card, { marginBottom: SPACING.xl }]} onPress={() => handleSocialLogin('Facebook')} disabled={loading}>
-                <Ionicons name="logo-facebook" size={18} color="#1877F2" />
-                <Text style={s.socialText}>Continue with Facebook</Text>
               </TouchableOpacity>
             </>
           )}
