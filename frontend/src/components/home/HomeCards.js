@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { COLORS, FONTS, RADIUS, SPACING, SHADOWS } from '../../constants/theme';
 import { useMetricsStore } from '../../store/metricsStore';
+import { useAuthStore } from '../../store/authStore';
 import { calculateReadiness } from '../../utils/metricsUtils';
 
 
@@ -138,11 +139,16 @@ const donutStyles = StyleSheet.create({
 
 // ─── 1. READINESS CARD ────────────────────────────────────────────────────────
 export function ReadinessCard({ onPress }) {
-  const score = 82; // Matches image exactly
-  const sleepStatus = 'OPTIMAL';
-  const fatigueStatus = 'LOW';
-  const primeLabel = 'PRIME';
-  const yesterdayChange = '+12%';
+  const { todayMetrics, computeReadiness } = useMetricsStore();
+  
+  // Display readiness score from store or compute it, default to 0
+  const score = todayMetrics.readinessScore || computeReadiness() || 0;
+  
+  // Status labels based on metrics, default to placeholder if zero
+  const sleepStatus = todayMetrics.sleep > 7 ? 'OPTIMAL' : todayMetrics.sleep > 0 ? 'FAIR' : 'PENDING';
+  const fatigueStatus = todayMetrics.fatigue > 3 ? 'HIGH' : todayMetrics.fatigue > 0 ? 'LOW' : 'STABLE';
+  const primeLabel = score > 80 ? 'PRIME' : score > 50 ? 'READY' : 'RECOVER';
+  const yesterdayChange = todayMetrics.readinessChange || '0%';
 
   return (
     <TouchableOpacity
@@ -168,7 +174,7 @@ export function ReadinessCard({ onPress }) {
       <Text style={rcStyles.scoreNumber}>{score}</Text>
       <Text style={rcStyles.scoreSubtitle}>Readiness Score</Text>
 
-      {/* Status pills - Stacking text matches image */}
+      {/* Status pills */}
       <View style={rcStyles.pillsRow}>
         <View style={rcStyles.pill}>
           <Text style={rcStyles.pillKey}>SLEEP:</Text>
@@ -274,9 +280,10 @@ const PEDOMETER_STATUS_CONFIG = {
 export function StepCard({ onPress, weekData = [], pedometerStatus = 'initializing' }) {
   const { todayMetrics } = useMetricsStore();
   const steps = todayMetrics.steps || 0;
-  const goal = 10000;
+  const goal = todayMetrics.stepGoal || 10000;
   const pct = Math.min(steps / goal, 1);
-  const safeWeek = weekData.length === 7 ? weekData : [8200, 5400, 9100, 7300, 8800, steps, 0];
+  // Default empty week if no data
+  const safeWeek = weekData.length === 7 ? weekData : [0, 0, 0, 0, 0, steps, 0];
   const GREEN = '#1A8B80';
   const statusCfg = PEDOMETER_STATUS_CONFIG[pedometerStatus] || PEDOMETER_STATUS_CONFIG.initializing;
 
@@ -388,12 +395,13 @@ const scStyles = StyleSheet.create({
 
 // ─── 3. DAILY CALORIES CARD ───────────────────────────────────────────────────
 export function CaloriesCard({ onPress }) {
-  const caloriesBurned = 420;
-  const caloriesConsumed = 1840;
+  const { todayMetrics } = useMetricsStore();
+  const caloriesBurned = todayMetrics.caloriesBurned || 0;
+  const caloriesConsumed = todayMetrics.caloriesConsumed || 0;
   const net = caloriesConsumed - caloriesBurned;
-  const maxCal = 2400;
-  const burnedPct = Math.round((caloriesBurned / maxCal) * 100);
-  const consumedPct = Math.round((caloriesConsumed / maxCal) * 100);
+  const maxCal = todayMetrics.calorieGoal || 2000;
+  const burnedPct = maxCal > 0 ? Math.round((caloriesBurned / maxCal) * 100) : 0;
+  const consumedPct = maxCal > 0 ? Math.round((caloriesConsumed / maxCal) * 100) : 0;
 
   return (
     <TouchableOpacity
@@ -473,12 +481,11 @@ const ccStyles = StyleSheet.create({
 });
 
 // ─── 4. WATER INTAKE CARD (half width) ───────────────────────────────────────
-// Matches Stitch: water icon + add, "1.8L / 2.5L", coral bar chart, "WATER INTAKE"
 export function WaterCard({ onPress, weekData = [] }) {
   const { todayMetrics, logWater } = useMetricsStore();
-  const { water } = todayMetrics;
-  const goal = 2.5;
-  const safeWeek = weekData.length === 7 ? weekData : [2.1, 1.9, 2.5, 1.6, 2.0, water, 0];
+  const water = todayMetrics.water || 0;
+  const goal = todayMetrics.waterGoal || 2.5;
+  const safeWeek = weekData.length === 7 ? weekData : [0, 0, 0, 0, 0, water, 0];
   const RED = '#A23B2A';
 
   return (
@@ -487,23 +494,20 @@ export function WaterCard({ onPress, weekData = [] }) {
       activeOpacity={0.88}
       style={[hwStyles.card, SHADOWS.card]}
     >
-      {/* Top: icon + add button */}
       <View style={hwStyles.topRow}>
         <View style={[hwStyles.iconBox, { backgroundColor: '#F8EBEA' }]}>
           <Ionicons name="water-outline" size={18} color={RED} />
         </View>
-        <TouchableOpacity onPress={logWater} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+        <TouchableOpacity onPress={() => logWater(0.25)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
           <Ionicons name="add-circle-outline" size={24} color={RED} />
         </TouchableOpacity>
       </View>
 
-      {/* Value */}
       <View style={hwStyles.valueRow}>
         <Text style={hwStyles.value}>{water.toFixed(1)}L</Text>
         <Text style={hwStyles.goal}> / {goal}L</Text>
       </View>
 
-      {/* Bar chart */}
       <View style={{ marginTop: SPACING.md, flex: 1, justifyContent: 'flex-end' }}>
         <MiniBarChart data={safeWeek} color={RED} maxHeight={44} barWidth={13} hideLabels={true} />
       </View>
@@ -514,18 +518,16 @@ export function WaterCard({ onPress, weekData = [] }) {
 }
 
 // ─── 5. SLEEP QUALITY CARD (half width) ──────────────────────────────────────
-// Matches Stitch: moon icon + "+4%", "7h 20m", teal bar chart, "SLEEP QUALITY"
 export function SleepCard({ onPress, weekData = [] }) {
   const { todayMetrics, weeklyData } = useMetricsStore();
-  const { sleep } = todayMetrics;
+  const sleep = todayMetrics.sleep || 0;
   const h = Math.floor(sleep);
   const m = Math.round((sleep - h) * 60);
-  const safeWeek = weekData.length === 7 ? weekData : (weeklyData?.map(d => d.sleep) || [7.5, 6.8, 8.0, 7.1, 7.8, sleep, 0]);
+  const safeWeek = weekData.length === 7 ? weekData : (weeklyData?.map(d => d.sleep) || [0, 0, 0, 0, 0, sleep, 0]);
   const GREEN = '#11664D';
 
-  // Calc change vs last week avg
-  const lastWeekAvg = 7.0;
-  const changePct = Math.round(((sleep - lastWeekAvg) / lastWeekAvg) * 100);
+  const lastWeekAvg = todayMetrics.lastWeekSleepAvg || 7.0;
+  const changePct = lastWeekAvg > 0 ? Math.round(((sleep - lastWeekAvg) / lastWeekAvg) * 100) : 0;
   const changeLabel = `${changePct >= 0 ? '+' : ''}${changePct}%`;
 
   return (
@@ -534,7 +536,6 @@ export function SleepCard({ onPress, weekData = [] }) {
       activeOpacity={0.88}
       style={[hwStyles.card, SHADOWS.card]}
     >
-      {/* Top: icon + change text */}
       <View style={hwStyles.topRow}>
         <View style={[hwStyles.iconBox, { backgroundColor: '#E8F3EE' }]}>
           <Ionicons name="moon-outline" size={18} color={GREEN} />
@@ -542,12 +543,10 @@ export function SleepCard({ onPress, weekData = [] }) {
         <Text style={[hwStyles.changeText, { color: GREEN }]}>{changeLabel}</Text>
       </View>
 
-      {/* Value */}
       <View style={hwStyles.valueRow}>
         <Text style={hwStyles.value}>{h}h {m}m</Text>
       </View>
 
-      {/* Bar chart */}
       <View style={{ marginTop: SPACING.md, flex: 1, justifyContent: 'flex-end' }}>
         <MiniBarChart data={safeWeek} color={GREEN} maxHeight={44} barWidth={13} hideLabels={true} />
       </View>
@@ -603,7 +602,7 @@ const hwStyles = StyleSheet.create({
   footerLabel: {
     fontFamily: FONTS.regular,
     fontSize: 10,
-    color: '#A0A4A8', // match image light grey
+    color: '#A0A4A8',
     letterSpacing: 0.5,
     marginTop: 12,
   },
@@ -611,17 +610,28 @@ const hwStyles = StyleSheet.create({
 
 // ─── 6. WORKOUT WEEK CARD ─────────────────────────────────────────────────────
 export function WorkoutWeekCard({ onPress, logs = [] }) {
+  const { user } = useAuthStore();
   const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-  // For the sake of the mock design UI looking exactly like the image:
-  // "4 of 5 sessions completed" and "80%" text.
-  // The image shows 5 bars filled, 2 bars empty.
-  // Let's use 5 sessions completed as the default for visual parity with the user image.
-  const completedSessions = 5;
-  const totalGoal = 5; // They might have a goal of 5. The image shows "4 of 5", but the bars show 5 filled. Let's use what the image text says: "4 of 5" but the bars actually show Mon, Tue, Thu, Fri as filled (that's 4 bars filled!). Mon is high, Tue is slightly lower, Wed is empty, Thu is high, Fri is slightly lower, Sat/Sun empty.
-  // Let's match the bar heights from the image:
-  const barHeights = [1, 0.85, 0.15, 1, 0.85, 0.15, 0.15];
-  const barWidth = 24; 
+  
+  // Get data from store
+  const completedSessions = logs.filter(l => {
+    const logDate = new Date(l.date);
+    const now = new Date();
+    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 1));
+    return logDate >= startOfWeek;
+  }).length;
+  
+  const totalGoal = user?.workoutGoal || 0;
+  const percent = totalGoal > 0 ? Math.round((completedSessions / totalGoal) * 100) : 0;
 
+  // Simple logic to fill bars based on logs
+  const logDays = logs.map(l => new Date(l.date).getDay());
+  const barHeights = days.map((_, i) => {
+    const dayIndex = (i + 1) % 7; // Mon=1, ..., Sun=0
+    return logDays.includes(dayIndex) ? 1 : 0.15;
+  });
+  
+  const barWidth = 24; 
   const GREEN_TEXT = '#11664D';
   const GREEN_BAR = '#84A98C';
   const EMPTY_BAR = '#EBEBEB';
@@ -631,9 +641,9 @@ export function WorkoutWeekCard({ onPress, logs = [] }) {
       <View style={wwStyles.header}>
         <View style={wwStyles.titleWrapper}>
           <Text style={wwStyles.title}>Workouts This Week</Text>
-          <Text style={wwStyles.subtitle}>4 of 5 sessions completed</Text>
+          <Text style={wwStyles.subtitle}>{completedSessions} of {totalGoal} sessions completed</Text>
         </View>
-        <Text style={[wwStyles.percentText, { color: GREEN_TEXT }]}>80%</Text>
+        <Text style={[wwStyles.percentText, { color: GREEN_TEXT }]}>{percent}%</Text>
       </View>
 
       <View style={wwStyles.barsArea}>
@@ -644,7 +654,7 @@ export function WorkoutWeekCard({ onPress, logs = [] }) {
                 wwStyles.bar,
                 {
                   width: barWidth,
-                  height: 60 * Math.max(barHeights[i], 0.15),
+                  height: 60 * barHeights[i],
                   backgroundColor: barHeights[i] > 0.2 ? GREEN_BAR : EMPTY_BAR,
                   borderRadius: barWidth / 2,
                 },
@@ -714,27 +724,26 @@ const wwStyles = StyleSheet.create({
 
 // ─── 7. DIET TARGETS CARD ─────────────────────────────────────────────────────
 export function DietTargetsCard({ onPress }) {
-  const currentCalories = 1840;
-  const maxCalories = 2400;
-  const currentProtein = 112;
-  const maxProtein = 150;
-  const currentCarbs = 210;
-  const maxCarbs = 300;
-  const currentFats = 48;
-  const maxFats = 80;
+  const { todayMetrics } = useMetricsStore();
+  const currentCalories = todayMetrics.caloriesConsumed || 0;
+  const maxCalories = todayMetrics.calorieGoal || 0;
+  const currentProtein = todayMetrics.protein || 0;
+  const maxProtein = todayMetrics.proteinGoal || 0;
+  const currentCarbs = todayMetrics.carbs || 0;
+  const maxCarbs = todayMetrics.carbsGoal || 0;
+  const currentFats = todayMetrics.fat || 0;
+  const maxFats = todayMetrics.fatGoal || 0;
 
-  const calPct = Math.min(currentCalories / maxCalories, 1) * 100;
-  const proPct = Math.min(currentProtein / maxProtein, 1) * 100;
+  const calPct = maxCalories > 0 ? Math.min(currentCalories / maxCalories, 1) * 100 : 0;
+  const proPct = maxProtein > 0 ? Math.min(currentProtein / maxProtein, 1) * 100 : 0;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.88} style={[dtStyles.card, SHADOWS.card]}>
-      {/* Header */}
       <View style={dtStyles.headerRow}>
         <Text style={dtStyles.title}>Diet Targets</Text>
         <Ionicons name="restaurant-outline" size={22} color={COLORS.textDark} />
       </View>
 
-      {/* Calories */}
       <View style={dtStyles.macroRow}>
         <Text style={dtStyles.macroLabel}>Calories</Text>
         <Text style={dtStyles.macroValue}>
@@ -745,7 +754,6 @@ export function DietTargetsCard({ onPress }) {
         <View style={[dtStyles.progressBarFill, { width: `${calPct}%`, backgroundColor: '#A23B2A' }]} />
       </View>
 
-      {/* Protein */}
       <View style={dtStyles.macroRow}>
         <Text style={dtStyles.macroLabel}>Protein</Text>
         <Text style={dtStyles.macroValue}>
@@ -758,7 +766,6 @@ export function DietTargetsCard({ onPress }) {
 
       <View style={dtStyles.divider} />
 
-      {/* Bottom Row */}
       <View style={dtStyles.bottomRow}>
         <View style={dtStyles.bottomCol}>
           <Text style={dtStyles.bottomLabel}>CARBS</Text>
@@ -799,59 +806,58 @@ const dtStyles = StyleSheet.create({
     marginBottom: 8,
   },
   macroLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: 15,
-    color: '#0A1B28',
+    fontFamily: FONTS.medium,
+    fontSize: 14,
+    color: '#717578',
   },
   macroValue: {
     fontFamily: FONTS.regular,
-    fontSize: 15,
+    fontSize: 12,
     color: COLORS.textMuted,
   },
   macroCurrent: {
     fontFamily: FONTS.black,
-    fontSize: 17,
-    color: '#0A1B28',
+    fontSize: 16,
+    color: COLORS.textDark,
   },
   progressBarBg: {
     height: 8,
-    backgroundColor: '#EBEBEB',
+    backgroundColor: '#F0F2F7',
     borderRadius: 4,
-    marginBottom: SPACING.lg,
+    marginBottom: 20,
+    overflow: 'hidden',
   },
   progressBarFill: {
-    height: 8,
+    height: '100%',
     borderRadius: 4,
   },
   divider: {
     height: 1,
-    backgroundColor: 'transparent', 
-    marginTop: Math.floor(SPACING.sm / 2),
-    marginBottom: SPACING.lg,
+    backgroundColor: '#F0F2F7',
+    marginVertical: 12,
   },
   bottomRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
   },
   bottomCol: {
     flex: 1,
   },
   bottomLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: 12,
-    color: '#717578', 
-    letterSpacing: 0.8,
+    fontFamily: FONTS.bold,
+    fontSize: 10,
+    color: '#A0A4A8',
+    letterSpacing: 1,
     marginBottom: 4,
-    textTransform: 'uppercase',
   },
   bottomValue: {
     fontFamily: FONTS.black,
-    fontSize: 19,
-    color: '#0A1B28', 
+    fontSize: 18,
+    color: COLORS.textDark,
   },
   bottomMax: {
     fontFamily: FONTS.regular,
-    fontSize: 17,
+    fontSize: 12,
     color: COLORS.textMuted,
   },
 });

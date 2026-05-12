@@ -10,6 +10,21 @@ import {
   OAuthProvider,
   getAuth
 } from 'firebase/auth';
+import {
+  getFirestore,
+  serverTimestamp,
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  onSnapshot,
+  getDocs,
+  deleteDoc,
+  query,
+  orderBy,
+  addDoc,
+} from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
@@ -22,12 +37,21 @@ const firebaseConfig = {
   measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
+// Debug: Log Firebase config (masked)
+console.log('[Firebase] Config check:', {
+  apiKey: firebaseConfig.apiKey ? '***' + firebaseConfig.apiKey.slice(-4) : 'MISSING',
+  projectId: firebaseConfig.projectId || 'MISSING',
+  authDomain: firebaseConfig.authDomain || 'MISSING',
+});
+
 // Initialize Firebase (Modular)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+console.log('[Firebase] Modular App Initialized:', app.name);
 
 // Initialize Firebase (Compat) - Required for expo-firebase-recaptcha on Web
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
+  console.log('[Firebase] Compat App Initialized');
 }
 
 // Initialize Auth with persistence for React Native vs Web
@@ -37,6 +61,21 @@ export const auth = Platform.OS === 'web'
     persistence: getReactNativePersistence(AsyncStorage)
   });
 
+export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
+export {
+  serverTimestamp,
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  onSnapshot,
+  getDocs,
+  deleteDoc,
+  query,
+  orderBy,
+  addDoc,
+};
 export default app;

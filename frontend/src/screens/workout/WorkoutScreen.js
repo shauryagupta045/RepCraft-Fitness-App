@@ -53,7 +53,7 @@ function MyRoutineTab({ navigation }) {
     const relevantCardio = cardioSessions.filter(s => new Date(s.date) >= sevenDaysAgo);
     const relevantHyrox = hyroxSessions.filter(s => new Date(s.date) >= sevenDaysAgo);
 
-    if (relevantWorkouts.length === 0 && relevantCardio.length === 0 && relevantHyrox.length === 0) return 85; 
+    if (relevantWorkouts.length === 0 && relevantCardio.length === 0 && relevantHyrox.length === 0) return 0; 
 
     let totalScore = 0;
     let counts = 0;
@@ -83,7 +83,7 @@ function MyRoutineTab({ navigation }) {
       }
     });
 
-    return counts > 0 ? Math.round(totalScore / counts) : 85;
+    return counts > 0 ? Math.round(totalScore / counts) : 0;
   }, [workoutLogs, cardioSessions, hyroxSessions]);
 
   return (
@@ -110,13 +110,13 @@ function MyRoutineTab({ navigation }) {
           <View style={pS.perfScoreRow}>
             <View>
               <Text style={pS.perfScoreVal}>{performanceScore}%</Text>
-              <Text style={pS.perfScoreSub}>Top 5% in your bracket</Text>
+              <Text style={pS.perfScoreSub}>{performanceScore > 0 ? 'Tracking your progress' : 'Complete a session to start'}</Text>
             </View>
             <View style={pS.perfScoreChart}>
-              <View style={[pS.bar, { height: 20, backgroundColor: 'rgba(23,88,77,0.3)' }]} />
-              <View style={[pS.bar, { height: 35, backgroundColor: 'rgba(23,88,77,0.3)' }]} />
-              <View style={[pS.bar, { height: 50, backgroundColor: '#17584D' }]} />
-              <View style={[pS.bar, { height: 25, backgroundColor: 'rgba(23,88,77,0.3)' }]} />
+              <View style={[pS.bar, { height: 20, backgroundColor: performanceScore > 20 ? '#17584D' : 'rgba(23,88,77,0.3)' }]} />
+              <View style={[pS.bar, { height: 35, backgroundColor: performanceScore > 40 ? '#17584D' : 'rgba(23,88,77,0.3)' }]} />
+              <View style={[pS.bar, { height: 50, backgroundColor: performanceScore > 60 ? '#17584D' : 'rgba(23,88,77,0.3)' }]} />
+              <View style={[pS.bar, { height: 25, backgroundColor: performanceScore > 80 ? '#17584D' : 'rgba(23,88,77,0.3)' }]} />
             </View>
           </View>
         </View>
@@ -127,28 +127,29 @@ function MyRoutineTab({ navigation }) {
               <Text style={pS.statCardTitle}>WEEKLY VOLUME</Text>
               <Ionicons name="stats-chart" size={12} color="#D96055" />
             </View>
-            <Text style={pS.statVal}>42.5k</Text>
-            <Text style={pS.statDelta}>+12% VS LAST WEEK</Text>
+            <Text style={pS.statVal}>0</Text>
+            <Text style={pS.statDelta}>0% VS LAST WEEK</Text>
           </View>
           <View style={[pS.statCard, SHADOWS.sm]}>
             <View style={pS.statHeader}>
               <Text style={pS.statCardTitleLight}>RECENT PR</Text>
               <Ionicons name="trophy" size={12} color="#D96055" />
             </View>
-            <Text style={pS.statVal}>225lb</Text>
-            <Text style={pS.statSubLight}>BENCH PRESS</Text>
+            <Text style={pS.statVal}>0</Text>
+            <Text style={pS.statSubLight}>NO DATA</Text>
           </View>
           <View style={[pS.statCard, SHADOWS.sm]}>
             <Ionicons name="flame" size={20} color="#D96055" style={{ marginBottom: 8 }} />
-            <Text style={pS.statVal}>12k</Text>
+            <Text style={pS.statVal}>0</Text>
             <Text style={pS.statSubLight}>KCAL</Text>
           </View>
           <View style={[pS.statCard, SHADOWS.sm]}>
             <Ionicons name="stopwatch" size={20} color="#17584D" style={{ marginBottom: 8 }} />
-            <Text style={pS.statVal}>34h</Text>
+            <Text style={pS.statVal}>0h</Text>
             <Text style={pS.statSubLight2}>UPTIME</Text>
           </View>
         </View>
+
 
 
 
@@ -176,7 +177,6 @@ function RoutineCard({ routine, navigation, index }) {
   const pillText = isFirst ? '#F7706A' : '#49A28A';
 
   const preview = routine.exercises.slice(0, 3);
-  const mockSetsReps = isFirst ? ["4 x 8-10", "3 x 12", "3 x 15"] : ["5 x 5", "4 x 12", "3 x 15"];
 
   return (
     <TouchableOpacity
@@ -202,7 +202,7 @@ function RoutineCard({ routine, navigation, index }) {
               <View style={rS.exBullet} />
               <Text style={rS.exName}>{ex.name}</Text>
             </View>
-            <Text style={rS.exSetsReps}>{mockSetsReps[i] || "3 x 10"}</Text>
+            <Text style={rS.exSetsReps}>{ex.sets} x {ex.reps}</Text>
           </View>
         ))}
       </View>
@@ -709,7 +709,7 @@ function CardioTab() {
                   />
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={cS.sessionTitleText}>{s.type === 'Run' ? 'Morning Tempo Run' : s.type}</Text>
+                  <Text style={cS.sessionTitleText}>{s.type}</Text>
                   <Text style={cS.sessionMetaText}>{s.date} • {s.duration}m {s.calories ? `• ${s.calories} kcal` : ''}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>

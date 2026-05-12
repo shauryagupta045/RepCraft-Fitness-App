@@ -4,48 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
-const MOCK_NOTIFICATIONS = [
-  {
-    id: '1',
-    title: 'Workout Reminder',
-    message: 'Time for your daily Upper Body session! You\'re on a 14-day streak.',
-    time: '2h ago',
-    type: 'workout',
-    read: false,
-  },
-  {
-    id: '2',
-    title: 'Hydration Goal',
-    message: 'You\'ve only drank 1.2L today. Drink 800ml more to reach your goal!',
-    time: '4h ago',
-    type: 'water',
-    read: true,
-  },
-  {
-    id: '3',
-    title: 'New Achievement!',
-    message: 'Congratulations! You\'ve completed 50 workouts this year.',
-    time: 'Yesterday',
-    type: 'achievement',
-    read: true,
-  },
-  {
-    id: '4',
-    title: 'Sleep Analysis',
-    message: 'Your sleep quality was 15% better last night. Keep it up!',
-    time: '2 days ago',
-    type: 'sleep',
-    read: true,
-  },
-  {
-    id: '5',
-    title: 'Weekly Report',
-    message: 'Your weekly progress report is ready. Check your gains!',
-    time: '3 days ago',
-    type: 'progress',
-    read: true,
-  },
-];
+const MOCK_NOTIFICATIONS = [];
 
 const NotificationIcon = ({ type }) => {
   switch (type) {
@@ -84,7 +43,7 @@ export default function NotificationScreen({ navigation }) {
           <Ionicons name="chevron-back" size={28} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
-        <TouchableOpacity style={styles.clearBtn}>
+        <TouchableOpacity style={styles.clearBtn} onPress={() => setNotifications([])}>
           <Text style={styles.clearText}>Clear All</Text>
         </TouchableOpacity>
       </View>

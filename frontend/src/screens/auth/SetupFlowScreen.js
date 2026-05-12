@@ -24,7 +24,7 @@ const EXPERIENCES = [
 
 export default function SetupFlowScreen({ navigation }) {
   const { width } = useWindowDimensions();
-  const { login } = useAuthStore();
+  const { user, updateProfile, login } = useAuthStore();
   const [slide, setSlide] = useState(0);
   const scrollRef = useRef(null);
 
@@ -44,17 +44,27 @@ export default function SetupFlowScreen({ navigation }) {
 
   const isLast = slide === slides.length - 1;
 
-  const next = () => {
+  const next = async () => {
     if (isLast) {
-      // Navigate to MainApp automatically when login is called in authStore
-      login({ 
-        name: 'Guest User', 
-        email: 'guest@repcraft.app', 
-        goal, 
-        height, 
-        weight, 
-        experience 
-      });
+      if (user?.uid) {
+        // If authenticated, update profile in Firestore
+        await updateProfile({
+          goal,
+          height: parseInt(height) || 0,
+          weight: parseInt(weight) || 0,
+          activityLevel: experience,
+        });
+      } else {
+        // Fallback for guest flow
+        login({ 
+          name: 'Guest User', 
+          email: 'guest@repcraft.app', 
+          goal, 
+          height, 
+          weight, 
+          experience 
+        });
+      }
       return;
     }
     const nextSlide = slide + 1;
@@ -63,7 +73,11 @@ export default function SetupFlowScreen({ navigation }) {
   };
 
   const skip = () => {
-    login({ name: 'Guest User', email: 'guest@repcraft.app', goal: 'muscle' });
+    if (!user?.uid) {
+      login({ name: 'Guest User', email: 'guest@repcraft.app', goal: 'muscle' });
+    } else {
+      // If already logged in, just go home
+    }
   };
 
   const renderSlideContent = (item) => {

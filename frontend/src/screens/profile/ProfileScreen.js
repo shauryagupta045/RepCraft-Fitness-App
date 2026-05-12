@@ -119,8 +119,8 @@ export default function ProfileScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <Text style={s.heroName}>{user?.name || 'Alex Jordan'}</Text>
-          <Text style={s.heroEmail}>{user?.email || 'alex@repcraft.app'}</Text>
+          <Text style={s.heroName}>{user?.name || 'User'}</Text>
+          <Text style={s.heroEmail}>{user?.email || ''}</Text>
 
           {/* Goal pill */}
           <View style={s.goalPill}>

@@ -136,8 +136,8 @@ export function WaterDetailScreen({ navigation }) {
   const weekVals = weeklyData.map(d => d.water);
   const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-  // Hourly intake simulation
-  const hourly = [0, 0, 0, 0, 0, 0, 0.25, 0.5, 0.25, 0, 0.25, 0.25, 0, 0.5, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0];
+  // Hourly intake log (currently empty for zero-init)
+  const hourly = new Array(24).fill(0);
   const hourLabels = ['6', '8', '10', '12', '14', '16', '18', '20'];
 
   return (
@@ -180,13 +180,7 @@ export function WaterDetailScreen({ navigation }) {
             ]} />
             {/* Glass log */}
             <Text style={[ds.sectionTitle, { paddingHorizontal: SPACING.lg }]}>Intake Log</Text>
-            {[
-              { time: '7:30 AM', amount: 500 },
-              { time: '10:15 AM', amount: 250 },
-              { time: '12:45 PM', amount: 500 },
-              { time: '3:00 PM', amount: 250 },
-              { time: '6:00 PM', amount: 250 },
-            ].map((entry, i) => (
+            {[].map((entry, i) => (
               <View key={i} style={[ds.logRow, { marginHorizontal: SPACING.lg }, SHADOWS.sm]}>
                 <View style={[ds.logIcon, { backgroundColor: COLORS.secondary + '18' }]}>
                   <Ionicons name="water-outline" size={18} color={COLORS.secondary} />
@@ -241,15 +235,16 @@ export function SleepDetailScreen({ navigation }) {
   const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
   // Sleep architecture segments (proportional)
-  const stages = [
+  // Initially empty for new users
+  const stages = sleep > 0 ? [
     { label: 'REM Sleep',   dur: '1h 12m', pct: 15, color: COLORS.sleepREM },
     { label: 'Deep Sleep',  dur: '2h 05m', pct: 25, color: COLORS.sleepDeep },
     { label: 'Light Sleep', dur: '3h 45m', pct: 45, color: '#C5CBD8' },
     { label: 'Awake',       dur: '18m',    pct: 15, color: '#F0F2F5' },
-  ];
+  ] : [];
 
-  const qualityLabel = quality >= 90 ? 'EXCELLENT' : quality >= 75 ? 'GOOD' : quality >= 60 ? 'FAIR' : 'POOR';
-  const qualityColor = quality >= 90 ? COLORS.secondary : quality >= 75 ? '#27AE60' : '#F5A623';
+  const qualityLabel = sleep > 0 ? (quality >= 90 ? 'EXCELLENT' : quality >= 75 ? 'GOOD' : quality >= 60 ? 'FAIR' : 'POOR') : 'NO DATA';
+  const qualityColor = sleep > 0 ? (quality >= 90 ? COLORS.secondary : quality >= 75 ? '#27AE60' : '#F5A623') : COLORS.textMuted;
 
   return (
     <SafeAreaView style={ds.container} edges={['top']}>
@@ -268,10 +263,12 @@ export function SleepDetailScreen({ navigation }) {
             <Text style={slp.durationNum}>{h}h</Text>
             <Text style={slp.durationMin}> {m}m</Text>
           </View>
-          <View style={slp.trendBadge}>
-            <Ionicons name="trending-up" size={12} color={COLORS.secondary} />
-            <Text style={slp.trendText}>+12% vs last night</Text>
-          </View>
+          {sleep > 0 && (
+            <View style={slp.trendBadge}>
+              <Ionicons name="trending-up" size={12} color={COLORS.secondary} />
+              <Text style={slp.trendText}>Tracking progress</Text>
+            </View>
+          )}
         </View>
 
         {/* Quality score */}
@@ -283,14 +280,14 @@ export function SleepDetailScreen({ navigation }) {
             </View>
           </View>
           <View style={slp.scoreRow}>
-            <Text style={slp.score}>{quality}</Text>
+            <Text style={slp.score}>{sleep > 0 ? quality : 0}</Text>
             <Text style={slp.scoreOf}>/100</Text>
           </View>
           {/* Score dots */}
           <View style={slp.dotsRow}>
             {Array.from({ length: 8 }).map((_, i) => (
               <View key={i} style={[slp.scoreDot, {
-                backgroundColor: i < Math.round(quality / 12.5)
+                backgroundColor: (sleep > 0 && i < Math.round(quality / 12.5))
                   ? (i >= 6 ? COLORS.sleepDeep : i >= 4 ? COLORS.secondary : '#C5CBD8')
                   : COLORS.border,
                 width: i >= 6 ? 18 : 12,
@@ -308,48 +305,56 @@ export function SleepDetailScreen({ navigation }) {
               <Ionicons name="moon" size={18} color={COLORS.primary} />
             </View>
             <Text style={slp.timeLabel}>BEDTIME</Text>
-            <Text style={slp.timeVal}>22:45</Text>
-            <Text style={slp.timeSub}>-15min late</Text>
+            <Text style={slp.timeVal}>--:--</Text>
+            <Text style={slp.timeSub}>No data</Text>
           </View>
           <View style={[slp.timeCard, SHADOWS.sm]}>
             <View style={[slp.timeIcon, { backgroundColor: COLORS.secondary + '15' }]}>
               <Ionicons name="sunny" size={18} color={COLORS.secondary} />
             </View>
             <Text style={slp.timeLabel}>WAKE UP</Text>
-            <Text style={slp.timeVal}>06:05</Text>
-            <Text style={[slp.timeSub, { color: COLORS.secondary }]}>On time</Text>
+            <Text style={slp.timeVal}>--:--</Text>
+            <Text style={slp.timeSub}>No data</Text>
           </View>
         </View>
 
         {/* Sleep architecture */}
         <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg }]}>
           <Text style={slp.archTitle}>SLEEP ARCHITECTURE</Text>
-          {/* Stacked bar */}
-          <View style={slp.archBar}>
-            {stages.map((st, i) => (
-              <View key={i} style={{ flex: st.pct, backgroundColor: st.color }} />
-            ))}
-          </View>
-          {stages.map((st, i) => (
-            <View key={i} style={slp.archRow}>
-              <View style={[slp.archDot, { backgroundColor: st.color, borderWidth: st.color === '#F0F2F5' ? 1 : 0, borderColor: COLORS.border }]} />
-              <Text style={slp.archLabel}>{st.label}</Text>
-              <Text style={slp.archDur}>{st.dur} ({st.pct}%)</Text>
-            </View>
-          ))}
+          {sleep > 0 ? (
+            <>
+              {/* Stacked bar */}
+              <View style={slp.archBar}>
+                {stages.map((st, i) => (
+                  <View key={i} style={{ flex: st.pct, backgroundColor: st.color }} />
+                ))}
+              </View>
+              {stages.map((st, i) => (
+                <View key={i} style={slp.archRow}>
+                  <View style={[slp.archDot, { backgroundColor: st.color, borderWidth: st.color === '#F0F2F5' ? 1 : 0, borderColor: COLORS.border }]} />
+                  <Text style={slp.archLabel}>{st.label}</Text>
+                  <Text style={slp.archDur}>{st.dur} ({st.pct}%)</Text>
+                </View>
+              ))}
+            </>
+          ) : (
+            <Text style={ds.emptyText}>Track your sleep to see architecture</Text>
+          )}
         </View>
 
         {/* Sleep trends */}
         <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg }]}>
           <Text style={slp.archTitle}>SLEEP TRENDS</Text>
-          <BarChart data={weekSleep} labels={dayLabels} color={COLORS.sleepDeep} height={80} highlight={5} />
+          <BarChart data={weekSleep} labels={dayLabels} color={COLORS.sleepDeep} height={80} highlight={new Date().getDay() - 1} />
         </View>
 
         {/* Insight */}
         <View style={[slp.insightCard, SHADOWS.sm, { marginHorizontal: SPACING.lg }]}>
           <Ionicons name="bulb-outline" size={18} color="#F5A623" style={{ marginBottom: 6 }} />
           <Text style={slp.insightText}>
-            "Your body recovers most during Deep Sleep. You achieved 15% more tonight."
+            {sleep > 0 
+              ? "Your body recovers most during Deep Sleep. Consistently hitting your goal improves performance."
+              : "Track your sleep to receive personalized recovery insights."}
           </Text>
         </View>
 
@@ -402,7 +407,7 @@ export function StepDetailScreen({ navigation }) {
   const pct = Math.min(todayMetrics.steps / goal, 1);
   const weekSteps = weeklyData.map(d => d.steps);
   const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  const hourlySteps = [0,0,0,0,0,0,120,450,800,600,400,350,500,700,550,400,300,600,350,200,100,80,0,0];
+  const hourlySteps = new Array(24).fill(0);
 
   return (
     <SafeAreaView style={ds.container} edges={['top']}>
@@ -446,13 +451,13 @@ export function StepDetailScreen({ navigation }) {
         {tab === 0 && (
           <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg }]}>
             <Text style={ds.sectionTitle}>Hourly Activity</Text>
-            <BarChart data={hourlySteps} labels={['6','8','10','12','14','16','18','20']} color={COLORS.secondary} height={100} highlight={6} />
+            <BarChart data={hourlySteps} labels={['6','8','10','12','14','16','18','20']} color={COLORS.secondary} height={100} highlight={new Date().getHours() / 3} />
           </View>
         )}
         {tab === 1 && (
           <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg }]}>
             <Text style={ds.sectionTitle}>This Week</Text>
-            <BarChart data={weekSteps} labels={dayLabels} color={COLORS.secondary} height={100} highlight={5} />
+            <BarChart data={weekSteps} labels={dayLabels} color={COLORS.secondary} height={100} highlight={new Date().getDay() - 1} />
           </View>
         )}
 
@@ -493,7 +498,7 @@ export function CaloriesDetailScreen({ navigation }) {
   const isDeficit = net < 0;
 
   const weekBurned = weeklyData.map(d => d.caloriesBurned);
-  const weekConsumed = weeklyData.map(d => d.water * 780); // Simulated consumed
+  const weekConsumed = weeklyData.map(d => d.caloriesConsumed || 0); 
   const dayLabels = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
   const { width } = useWindowDimensions();
   const chartW = width - SPACING.lg * 2 - SPACING.lg * 2;
@@ -510,9 +515,8 @@ export function CaloriesDetailScreen({ navigation }) {
             {isDeficit ? '' : '+'}{net.toLocaleString()} <Text style={cal.netUnit}>kcal</Text>
           </Text>
           <Text style={cal.netDesc}>
-            Your metabolic {isDeficit ? 'deficit' : 'surplus'} is tracking{' '}
-            <Text style={{ fontFamily: FONTS.bold, color: COLORS.textDark }}>12% higher</Text>
-            {' '}than last {dayLabels[new Date().getDay() - 1] || 'Tuesday'}. Clinical optimum reached for fat oxidation.
+            Your metabolic {isDeficit ? 'deficit' : 'surplus'} is being tracked dynamically. 
+            Complete sessions and log food to see your balance.
           </Text>
         </View>
 
@@ -555,7 +559,7 @@ export function CaloriesDetailScreen({ navigation }) {
         <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg }]}>
           <View style={cal.logHeader}>
             <Text style={cal.logTitle}>Consistency Log</Text>
-            <Text style={cal.logMonth}>APRIL ▾</Text>
+            <Text style={cal.logMonth}>{new Date().toLocaleString('default', { month: 'long' }).toUpperCase()} ▾</Text>
           </View>
           <CalConsistencyGrid />
         </View>
@@ -602,7 +606,7 @@ function CalConsistencyGrid() {
     const d = i + 1;
     const isToday = d === today.getDate();
     const isPast = d < today.getDate();
-    const isMet = isPast && Math.random() > 0.3;
+    const isMet = false; // Zero init
     return { d, isToday, isMet };
   });
   return (
@@ -662,10 +666,10 @@ export function WorkoutWeekDetailScreen({ navigation }) {
         <StatCards items={[
           { value: workoutLogs.length, label: 'Sessions', color: COLORS.secondary },
           { value: `${Math.floor(totalMin/60)}h`, label: 'Total Time' },
-          { value: `${Math.round(workoutLogs.reduce((s,l)=>s+l.effort,0)/Math.max(workoutLogs.length,1))}/10`, label: 'Avg Effort' },
+          { value: `${Math.round(workoutLogs.reduce((s,l)=>s+(l.effort || 0),0)/Math.max(workoutLogs.length,1))}/10`, label: 'Avg Effort' },
         ]} />
         <Text style={[ds.sectionTitle, { paddingHorizontal: SPACING.lg }]}>Recent Sessions</Text>
-        {recent.map(log => {
+        {recent.length > 0 ? recent.map(log => {
           const r = routines.find(rt => rt.id === log.routineId);
           return (
             <View key={log.id} style={[ds.logRow, { marginHorizontal: SPACING.lg }, SHADOWS.sm]}>
@@ -681,7 +685,9 @@ export function WorkoutWeekDetailScreen({ navigation }) {
               </View>
             </View>
           );
-        })}
+        }) : (
+          <Text style={[ds.emptyText, { paddingHorizontal: SPACING.lg }]}>No sessions recorded yet.</Text>
+        )}
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
@@ -693,6 +699,8 @@ export function WorkoutWeekDetailScreen({ navigation }) {
    Stitch: Custom Header, Main Donut, Trends, Sleep/Fatigue summaries, Protocol Insights
 ════════════════════════════════════════════════════════════════════════════════ */
 function ReadinessHeader({ onBack }) {
+  const { user } = useAuthStore();
+  const firstName = user?.name?.split(' ')[0] || 'User';
   return (
     <View style={rd.header}>
       <TouchableOpacity onPress={onBack} style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -703,7 +711,7 @@ function ReadinessHeader({ onBack }) {
         <Ionicons name="notifications" size={20} color="#FF7B6E" style={{ marginRight: SPACING.md }} />
         {/* Avatar circle */}
         <View style={rd.avatar}>
-          <Text style={rd.avatarText}>A</Text>
+          <Text style={rd.avatarText}>{firstName[0].toUpperCase()}</Text>
         </View>
       </View>
     </View>
@@ -712,6 +720,8 @@ function ReadinessHeader({ onBack }) {
 
 export function ReadinessDetailScreen({ navigation }) {
   const [tab, setTab] = useState(1); // Week is default active 
+  const { todayMetrics } = useMetricsStore();
+  const score = todayMetrics.readinessScore || 0;
 
   return (
     <SafeAreaView style={ds.container} edges={['top']}>
@@ -725,34 +735,38 @@ export function ReadinessDetailScreen({ navigation }) {
 
         {/* Readiness Circle Chart */}
         <View style={rd.heroChartArea}>
-          <DonutChart size={200} strokeWidth={16} percentage={82} color="#FF7B6E" value="82" label="" />
+          <DonutChart size={200} strokeWidth={16} percentage={score} color="#FF7B6E" value={String(score)} label="" />
           {/* Note: since DonutChart has value and label inside, we can just overlay "READY" manually or use DonutChart. Our donutchart component centers text. We'll use absolute position for "READY" to match the mock. */}
-          <Text style={rd.heroReadyText}>READY</Text>
+          <Text style={rd.heroReadyText}>{score > 50 ? 'READY' : 'REST'}</Text>
 
           {/* Prime Condition Badge */}
           <View style={rd.primeBadge}>
-            <View style={rd.primeDot} />
-            <Text style={rd.primeText}>Prime Condition</Text>
+            <View style={[rd.primeDot, { backgroundColor: score > 50 ? '#27AE60' : COLORS.primary }]} />
+            <Text style={rd.primeText}>{score > 50 ? 'Prime Condition' : 'Needs Recovery'}</Text>
           </View>
         </View>
 
         {/* Insight Paragraph */}
         <Text style={rd.insightParagraph}>
-          Your metabolic recovery is 1.2% higher than your 7-day average. Today is optimal for a PR attempt.
+          {score > 0 
+            ? `Your metabolic recovery is tracking well. Your readiness score of ${score} suggests you are prepared for training.`
+            : "Complete a session or log sleep to see your readiness score. Your metabolic recovery will be tracked dynamically."}
         </Text>
 
         {/* Weekly Trend Section */}
         <View style={rd.trendsHeader}>
           <Text style={rd.trendsTitle}>Weekly Trend</Text>
-          <Text style={rd.trendsGrowth}>+4.2% GROWTH</Text>
+          <Text style={rd.trendsGrowth}>0% GROWTH</Text>
         </View>
         
         {/* Chart Box */}
         <View style={[ds.card, rd.chartBox, SHADOWS.sm]}>
-          <View style={{ flex: 1 }} />
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+             <Text style={ds.emptyText}>No trend data yet</Text>
+          </View>
           <View style={rd.chartLabels}>
              {['M','T','W','T','F','S','S'].map((day,i) => (
-                <Text key={i} style={[rd.chartLabelDay, i===3 && {color: '#FF7B6E'}]}>{day}</Text>
+                <Text key={i} style={[rd.chartLabelDay, i===(new Date().getDay()-1) && {color: '#FF7B6E'}]}>{day}</Text>
              ))}
           </View>
         </View>
@@ -765,8 +779,8 @@ export function ReadinessDetailScreen({ navigation }) {
                <Ionicons name="moon" size={16} color="#11664D" />
                <Text style={rd.statLabel}>SLEEP</Text>
             </View>
-            <Text style={rd.statValue}>8h 12m</Text>
-            <Text style={rd.statSubGreen}>EXCELLENT</Text>
+            <Text style={rd.statValue}>{todayMetrics.sleep > 0 ? `${Math.floor(todayMetrics.sleep)}h ${Math.round((todayMetrics.sleep % 1) * 60)}m` : '--'}</Text>
+            <Text style={rd.statSubGreen}>{todayMetrics.sleep > 7 ? 'EXCELLENT' : todayMetrics.sleep > 0 ? 'GOOD' : 'NO DATA'}</Text>
           </View>
 
           {/* Fatigue */}
@@ -775,8 +789,8 @@ export function ReadinessDetailScreen({ navigation }) {
                <Ionicons name="flash" size={16} color="#A23B2A" />
                <Text style={rd.statLabel}>FATIGUE</Text>
             </View>
-            <Text style={rd.statValue}>Low</Text>
-            <Text style={rd.statSubRed}>OPTIMAL</Text>
+            <Text style={rd.statValue}>{score > 70 ? 'Low' : score > 0 ? 'Moderate' : '--'}</Text>
+            <Text style={rd.statSubRed}>{score > 0 ? 'OPTIMAL' : 'NO DATA'}</Text>
           </View>
         </View>
 
@@ -787,9 +801,9 @@ export function ReadinessDetailScreen({ navigation }) {
           </View>
           <View style={rd.activityMid}>
             <Text style={rd.activityLabel}>PREVIOUS ACTIVITY</Text>
-            <Text style={rd.activityValue}>Leg Day (Heavy)</Text>
+            <Text style={rd.activityValue}>None Yet</Text>
           </View>
-          <Text style={rd.activitySubGreen}>-15% Load</Text>
+          <Text style={rd.activitySubGreen}>0% Load</Text>
         </View>
 
         {/* Daily Insights Protocol */}
@@ -803,14 +817,11 @@ export function ReadinessDetailScreen({ navigation }) {
             <Text style={rd.protocolTitle}>DAILY INSIGHTS</Text>
           </View>
           <Text style={rd.protocolText}>
-            "Your HRV baseline suggests central nervous system readiness. Focus on high-intensity compound movements today, but prioritize 500mg extra sodium for electrolyte balance."
+            {score > 0 
+              ? "Your HRV baseline suggests central nervous system readiness. Focus on high-intensity compound movements today."
+              : "Complete a session to generate personalized metabolic insights and recovery protocols."}
           </Text>
-          <View style={rd.protocolFooter}>
-            <Ionicons name="shield-checkmark" size={14} color="rgba(255,255,255,0.6)" style={{ marginRight: 4 }} />
-            <Text style={rd.protocolFooterText}>REPCRAFT MEDICAL PROTOCOL</Text>
-          </View>
         </LinearGradient>
-
       </ScrollView>
     </SafeAreaView>
   );

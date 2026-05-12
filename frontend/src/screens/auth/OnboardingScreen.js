@@ -58,7 +58,7 @@ export default function OnboardingScreen({ navigation }) {
 
   const next = () => {
     if (isLast) {
-      login({ name: 'Alex Jordan', email: 'alex@repcraft.app', goal });
+      login({ name: '', email: '', goal });
     // RootNav automatically switches to MainApp when isAuthenticated becomes true
       return;
     }
@@ -68,7 +68,7 @@ export default function OnboardingScreen({ navigation }) {
   };
 
   const skip = () => {
-    login({ name: 'Alex Jordan', email: 'alex@repcraft.app', goal });
+    login({ name: '', email: '', goal });
     // RootNav automatically switches to MainApp when isAuthenticated becomes true
   };
 

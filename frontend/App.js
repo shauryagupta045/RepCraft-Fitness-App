@@ -19,6 +19,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './src/services/firebase';
 
 // ─── Auth ──────────────────────────────────────────────────────────────
 import SplashScreen      from './src/screens/auth/SplashScreen';
@@ -185,12 +187,35 @@ function RootNav() {
 
 // ─── Entry point ───────────────────────────────────────────────────────
 export default function App() {
+  const { setUser } = useAuthStore();
   const [fontsLoaded, fontError] = useFonts({
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_700Bold,
     DMSans_900Black,
   });
+
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        console.log('[App] Auth state changed: User detected', user.uid);
+        try {
+          await setUser(user);
+        } catch (err) {
+          console.error('[App] setUser error:', err);
+        }
+      } else {
+        console.log('[App] Auth state changed: No user');
+        // If we were authenticated but Firebase says no user, log out locally
+        const { isAuthenticated, logout } = useAuthStore.getState();
+        if (isAuthenticated) {
+          console.log('[App] Local state was authenticated, performing logout');
+          await logout();
+        }
+      }
+    });
+    return unsubscribe;
+  }, [setUser]);
 
   // Show blank screen while fonts load (not a splash — splash is a screen)
   if (!fontsLoaded && !fontError) {

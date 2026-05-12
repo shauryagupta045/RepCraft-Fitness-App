@@ -22,7 +22,7 @@ import {
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri } from 'expo-auth-session';
+import { makeRedirectUri, ResponseType } from 'expo-auth-session';
 import * as Crypto from 'expo-crypto';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -42,7 +42,8 @@ export default function SignupScreen({ navigation }) {
   const recaptchaVerifier = useRef(null);
 
   // Google Sign-In Setup
-  // IMPORTANT: For Expo Go, use the standard redirect URI
+  // On web: use redirect URI (avoids COOP popup issues)
+  // On native (Expo Go): use the auth proxy
   const redirectUri = makeRedirectUri({
     useProxy: true,
   });
@@ -52,6 +53,8 @@ export default function SignupScreen({ navigation }) {
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
     redirectUri: redirectUri,
+    responseType: ResponseType.IdToken,
+    usePKCE: false,
   });
 
   React.useEffect(() => {
@@ -63,23 +66,19 @@ export default function SignupScreen({ navigation }) {
 
   React.useEffect(() => {
     if (response?.type === 'success') {
-      const { id_token, access_token } = response.params;
+      const idToken = response.params.id_token;
       
-      // On Web, the tokens might be in response.authentication
-      const idToken = id_token || response.authentication?.idToken;
-      const accessToken = access_token || response.authentication?.accessToken;
-
-      if (!idToken && !accessToken) {
-        console.error('Google Auth Success but no tokens found:', response);
-        setToast({ visible: true, message: 'Google Sign-In failed: No tokens received.', type: 'error' });
+      if (!idToken) {
+        console.error('Google Auth Success but no id_token found:', response);
+        setToast({ visible: true, message: 'Google Sign-In failed: No identity token received.', type: 'error' });
         return;
       }
 
-      const credential = GoogleAuthProvider.credential(idToken, accessToken);
+      const credential = GoogleAuthProvider.credential(idToken);
       setLoading(true);
       signInWithCredential(auth, credential)
-        .then((result) => {
-          setUser(result.user);
+        .then(async (result) => {
+          await setUser(result.user, true); // Mark as new user to initialize Firestore
           navigation.navigate('SetupFlow');
         })
         .catch((err) => {
@@ -138,7 +137,7 @@ export default function SignupScreen({ navigation }) {
     
     try {
       const result = await confirmationResult.confirm(otp);
-      setUser(result.user);
+      await setUser(result.user, true); // Mark as new user to initialize Firestore
       navigation.navigate('SetupFlow');
     } catch (err) {
       console.error('Verify OTP Error:', err);
@@ -147,6 +146,7 @@ export default function SignupScreen({ navigation }) {
       setLoading(false);
     }
   };
+
 
   const handleSocialSignup = (provider) => {
     if (provider === 'Google') {

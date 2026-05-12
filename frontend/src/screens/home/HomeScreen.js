@@ -47,8 +47,8 @@ export default function HomeScreen({ navigation }) {
   const todayRoutine = routines[0];
 
   const [showCount, setShowCount] = useState(true);
-  const [pedometerStatus, setPedometerStatus] = useState('initializing'); // 'initializing' | 'unavailable' | 'denied' | 'active' | 'error'
-  const notificationCount = 5; // Example count
+  const [pedometerStatus, setPedometerStatus] = useState('initializing'); 
+  const notificationCount = 0; 
 
   useEffect(() => {
     // Reset step count to 0 if it's a new calendar day
@@ -102,7 +102,7 @@ export default function HomeScreen({ navigation }) {
 
   const hour = new Date().getHours();
   const greetingUpper = hour < 12 ? 'GOOD MORNING' : hour < 17 ? 'GOOD AFTERNOON' : 'GOOD EVENING';
-  const firstName = user?.name?.split(' ')[0] || 'Alex';
+  const firstName = user?.name?.split(' ')[0] || 'User';
   const weekSteps = weeklyData.map((d) => d.steps);
   const weekWater = weeklyData.map((d) => d.water);
   const weekSleep = weeklyData.map((d) => d.sleep);

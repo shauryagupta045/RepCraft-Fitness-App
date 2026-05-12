@@ -16,32 +16,39 @@ import { useAuthStore } from '../../store/authStore';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 export default function EditProfileScreen({ navigation }) {
-  const { user, settings, updateProfile } = useAuthStore();
+  const { user, settings, updateProfile, isLoading } = useAuthStore();
   
-  const isMetric = settings.units === 'metric';
+  const isMetric = settings?.units === 'metric';
   const weightUnit = isMetric ? 'kg' : 'lb';
   const heightUnit = isMetric ? 'cm' : 'in';
   
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    goal: user?.goal || '',
-    level: user?.level || '',
-    weight: user?.weight?.toString() || '',
-    height: user?.height?.toString() || '',
-    age: user?.age?.toString() || '',
+    displayName: user?.name || '',
+    goal: user?.profile?.goal || '',
+    level: user?.profile?.activityLevel || '',
+    weight: user?.profile?.weight?.toString() || '',
+    height: user?.profile?.height?.toString() || '',
+    age: user?.profile?.age?.toString() || '',
   });
 
-  const handleSave = () => {
-    // Basic validation and type conversion
-    const updates = {
-      ...formData,
-      weight: parseFloat(formData.weight) || user?.weight,
-      height: parseFloat(formData.height) || user?.height,
-      age: parseInt(formData.age, 10) || user?.age,
-    };
-    
-    updateProfile(updates);
-    navigation.goBack();
+  const handleSave = async () => {
+    try {
+      // Basic validation and type conversion
+      const updates = {
+        displayName: formData.displayName,
+        goal: formData.goal,
+        activityLevel: formData.level,
+        weight: parseFloat(formData.weight) || user?.profile?.weight || 0,
+        height: parseFloat(formData.height) || user?.profile?.height || 0,
+        age: parseInt(formData.age, 10) || user?.profile?.age || 0,
+      };
+      
+      await updateProfile(updates);
+      navigation.goBack();
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      // Optional: show error toast
+    }
   };
 
   const renderInput = (label, key, icon, keyboardType = 'default') => (
@@ -89,7 +96,7 @@ export default function EditProfileScreen({ navigation }) {
           </View>
 
           <View style={s.form}>
-            {renderInput('Full Name', 'name', 'person-outline')}
+            {renderInput('Full Name', 'displayName', 'person-outline')}
             {renderInput('Fitness Goal', 'goal', 'flag-outline')}
             {renderInput('Fitness Level', 'level', 'ribbon-outline')}
             

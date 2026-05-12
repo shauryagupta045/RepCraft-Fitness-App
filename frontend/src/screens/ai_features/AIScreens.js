@@ -63,10 +63,27 @@ const AI_FEATURES = [
 export function AIHomeScreen({ navigation }) {
   const { user } = useAuthStore();
   const { todayMetrics } = useMetricsStore();
-  const firstName = user?.name?.split(' ')[0] || 'Alex';
+  const { workoutLogs } = useWorkoutStore();
+  const firstName = user?.name?.split(' ')[0] || 'User';
 
-  // Compute a quick insight from metrics (simulated logic for the quote)
-  const insightTxt = "You've trained 3 days straight — consider a rest day tomorrow for muscle recovery.";
+  // Count workouts completed in the last 7 days
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const weeklyWorkoutCount = workoutLogs.filter((log) => {
+    const logDate = new Date(log.date);
+    return logDate >= oneWeekAgo;
+  }).length;
+
+  // Derive recovery label from readiness score
+  const readiness = todayMetrics?.readinessScore || 0;
+  const recoveryLabel = readiness >= 75 ? 'Excellent' : readiness >= 50 ? 'Good' : readiness >= 25 ? 'Fair' : readiness > 0 ? 'Poor' : '—';
+  const recoveryColor = readiness >= 75 ? '#4ECDC4' : readiness >= 50 ? '#4ECDC4' : readiness >= 25 ? '#FFD93D' : '#FF6B6B';
+
+  const insightTxt = readiness >= 70 
+    ? "Your recovery is high today. Perfect time for a heavy lifting session!" 
+    : weeklyWorkoutCount > 3 
+    ? "You're on a roll this week! Make sure to prioritize sleep for optimal gains."
+    : "Consistency is the secret to progress. Let's aim for a quick session today!";
 
   return (
     <SafeAreaView style={aS.container} edges={['top']}>
@@ -80,15 +97,15 @@ export function AIHomeScreen({ navigation }) {
         <View style={aS.metricsRow}>
           <View style={aS.metricCard}>
             <Text style={aS.metricLabel}>STREAK</Text>
-            <Text style={aS.metricValue}>{user?.streak || 5} days</Text>
+            <Text style={aS.metricValue}>{user?.streak || 0} days</Text>
           </View>
           <View style={aS.metricCard}>
             <Text style={aS.metricLabel}>WORKOUTS</Text>
-            <Text style={aS.metricValue}>3</Text>
+            <Text style={aS.metricValue}>{weeklyWorkoutCount}</Text>
           </View>
           <View style={aS.metricCard}>
             <Text style={aS.metricLabel}>RECOVERY</Text>
-            <Text style={[aS.metricValue, { color: '#4ECDC4' }]}>Good</Text>
+            <Text style={[aS.metricValue, { color: recoveryColor }]}>{recoveryLabel}</Text>
           </View>
         </View>
       </View>

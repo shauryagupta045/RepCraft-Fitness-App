@@ -14,39 +14,13 @@ import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
 
-// Mock data for the chart and history
-const MOCK_SESSIONS = [
-  {
-    id: '1',
-    date: 'March 15, 2024',
-    routine: 'LEG DAY #4',
-    volume: '5,400kg',
-    sets: 5,
-    topSet: '90kg x 5',
-    avgRpe: 8.5,
-  },
-  {
-    id: '2',
-    date: 'March 12, 2024',
-    routine: 'CHEST FOCUS',
-    volume: '4,800kg',
-    sets: 4,
-    topSet: '85kg x 8',
-    avgRpe: 9.0,
-  },
-  {
-    id: '3',
-    date: 'March 08, 2024',
-    routine: 'UPPER BODY A',
-    volume: '4,200kg',
-    sets: 4,
-    topSet: '80kg x 10',
-    avgRpe: 7.5,
-  },
-];
+import { useWorkoutStore } from '../../store/workoutStore';
 
 export default function ExerciseHistoryScreen({ route, navigation }) {
   const { exercise } = route.params || {};
+  const { getExerciseHistory } = useWorkoutStore();
+  const historyData = getExerciseHistory(exercise?.name || 'Barbell Bench Press');
+  
   const [activeRange, setActiveRange] = useState('1M');
   const [activeMetric, setActiveMetric] = useState('Weight');
 
@@ -83,24 +57,24 @@ export default function ExerciseHistoryScreen({ route, navigation }) {
           <View style={[s.summaryCard, SHADOWS.sm]}>
             <Text style={s.summaryLabel}>CURRENT PR</Text>
             <View style={s.summaryValueRow}>
-              <Text style={s.summaryValue}>102.5</Text>
+              <Text style={s.summaryValue}>0</Text>
               <Text style={s.summaryUnit}>kg</Text>
             </View>
             <View style={s.summaryDateRow}>
               <Ionicons name="calendar-outline" size={14} color="#D96055" />
-              <Text style={s.summaryDate}>Jan 12, 2024</Text>
+              <Text style={s.summaryDate}>None</Text>
             </View>
           </View>
 
           <View style={[s.summaryCard, SHADOWS.sm]}>
             <Text style={[s.summaryLabel, { color: '#0F766E' }]}>LAST SESSION</Text>
             <View style={s.summaryValueRow}>
-              <Text style={s.summaryValue}>80</Text>
-              <Text style={s.summaryUnitSmall}>kg x 8</Text>
+              <Text style={s.summaryValue}>0</Text>
+              <Text style={s.summaryUnitSmall}>kg x 0</Text>
             </View>
             <View style={s.summaryDateRow}>
               <Ionicons name="time-outline" size={14} color="#0F766E" />
-              <Text style={s.summaryDate}>3 days ago</Text>
+              <Text style={s.summaryDate}>None</Text>
             </View>
           </View>
         </View>
@@ -171,31 +145,27 @@ export default function ExerciseHistoryScreen({ route, navigation }) {
         {/* SESSION HISTORY SECTION */}
         <Text style={s.sectionTitle}>Session History</Text>
         
-        {MOCK_SESSIONS.map((item) => (
-          <View key={item.id} style={[s.historyCard, SHADOWS.sm]}>
+        {historyData.map((item, index) => (
+          <View key={index} style={[s.historyCard, SHADOWS.sm]}>
             <View style={s.historyHeader}>
               <View>
                 <Text style={s.historyDate}>{item.date}</Text>
-                <Text style={s.historyRoutine}>{item.routine}</Text>
+                <Text style={s.historyRoutine}>{item.routine || 'Strength Session'}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={s.historyVolume}>{item.volume}</Text>
+                <Text style={s.historyVolume}>{item.volume} kg</Text>
                 <Text style={s.totalVolumeLabel}>TOTAL VOLUME</Text>
               </View>
             </View>
 
             <View style={s.historyStatsRow}>
               <View style={s.historyStat}>
-                <Text style={s.historyStatLabel}>SETS</Text>
-                <Text style={s.historyStatValue}>{item.sets}</Text>
+                <Text style={s.historyStatLabel}>WEIGHT</Text>
+                <Text style={s.historyStatValue}>{item.weight} kg</Text>
               </View>
               <View style={s.historyStat}>
-                <Text style={s.historyStatLabel}>TOP SET</Text>
-                <Text style={s.historyStatValue}>{item.topSet}</Text>
-              </View>
-              <View style={s.historyStat}>
-                <Text style={s.historyStatLabel}>AVG RPE</Text>
-                <Text style={s.historyStatValue}>{item.avgRpe}</Text>
+                <Text style={s.historyStatLabel}>REPS</Text>
+                <Text style={s.historyStatValue}>{item.reps}</Text>
               </View>
             </View>
           </View>

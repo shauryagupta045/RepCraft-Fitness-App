@@ -396,7 +396,7 @@ export function RoutineBuilderScreen({ route, navigation }) {
           </View>
           <View style={rb.pill}>
             <Ionicons name="stopwatch-outline" size={14} color="#8A92A6" />
-            <Text style={rb.pillText}>EST. 45 MIN</Text>
+            <Text style={rb.pillText}>EST. {exercises.length * 10} MIN</Text>
           </View>
         </View>
 
@@ -417,8 +417,8 @@ export function RoutineBuilderScreen({ route, navigation }) {
               <Text style={rb.exMeta}>{ex.sets} sets • {ex.rest}s rest</Text>
 
               <View style={rb.exRecordRow}>
-                <Text style={rb.exRecordBold}>PR: {ex.pr || (100 - i * 20)}kg</Text>
-                <Text style={rb.exRecordLight}> • Last: {ex.weight || (80 - i * 15)}kg x {ex.reps}</Text>
+                <Text style={rb.exRecordBold}>PR: {ex.pr || 0}kg</Text>
+                <Text style={rb.exRecordLight}> • Last: {ex.weight || 0}kg x {ex.reps || 0}</Text>
               </View>
             </View>
 
@@ -457,11 +457,17 @@ export function RoutineBuilderScreen({ route, navigation }) {
         <View style={rb.statsRow}>
           <View style={rb.statBox}>
             <Text style={rb.statLabel}>VOLUME LOAD</Text>
-            <Text style={rb.statValue}>4,280 <Text style={rb.statUnit}>kg</Text></Text>
+            <Text style={rb.statValue}>
+              {exercises.reduce((sum, ex) => sum + (ex.sets * ex.reps * (ex.weight || 0)), 0).toLocaleString()} 
+              <Text style={rb.statUnit}> kg</Text>
+            </Text>
           </View>
           <View style={rb.statBox}>
             <Text style={rb.statLabel}>FOCUS SCORE</Text>
-            <Text style={rb.statValue}>92 <Text style={rb.statUnit}>%</Text></Text>
+            <Text style={rb.statValue}>
+              {exercises.length > 0 ? 85 : 0} 
+              <Text style={rb.statUnit}> %</Text>
+            </Text>
           </View>
         </View>
 
