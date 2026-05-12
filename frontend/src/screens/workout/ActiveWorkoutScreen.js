@@ -47,11 +47,17 @@ const cm = StyleSheet.create({
 
 /* ─── Rest Timer ──────────────────────────────────────────────────────────── */
 function RestTimerModal({ visible, duration, onComplete, onClose }) {
-  const [left, setLeft] = useState(duration);
+  // Ensure duration is a number
+  const initialDuration = typeof duration === 'number' ? duration : parseInt(duration) || 60;
+  const [left, setLeft] = useState(initialDuration);
   const [running, setRunning] = useState(true);
-  const pct = Math.max(left / duration, 0);
+  const pct = initialDuration > 0 ? Math.max(left / initialDuration, 0) : 0;
 
-  useEffect(() => { setLeft(duration); setRunning(true); }, [duration, visible]);
+  useEffect(() => { 
+    const dur = typeof duration === 'number' ? duration : parseInt(duration) || 60;
+    setLeft(dur); 
+    setRunning(true); 
+  }, [duration, visible]);
 
   useEffect(() => {
     if (!visible || !running) return;

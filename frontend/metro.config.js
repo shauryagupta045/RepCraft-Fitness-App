@@ -20,6 +20,11 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       platform
     );
   }
+  if (platform === 'web' && moduleName === 'react-native-maps') {
+    return {
+      type: 'empty',
+    };
+  }
   return context.resolveRequest(context, moduleName, platform);
 };
 

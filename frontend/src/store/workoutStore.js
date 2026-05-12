@@ -67,16 +67,26 @@ export const useWorkoutStore = create(
           };
         }),
 
-      finishSession: (effort) =>
+      finishSession: (manualEffort) =>
         set((state) => {
           if (!state.activeSession) return {};
           const duration = Math.round((Date.now() - state.activeSession.startTime) / 60000);
+          
+          // Calculate automatic effort based on set completion vs routine plan
+          const routine = state.routines.find(r => r.id === state.activeSession.routineId);
+          let calculatedEffort = 7;
+          if (routine) {
+            const totalPlannedSets = routine.exercises.reduce((sum, ex) => sum + (ex.sets || 0), 0);
+            const totalCompletedSets = Object.values(state.activeSession.sets).reduce((sum, sets) => sum + sets.length, 0);
+            calculatedEffort = totalPlannedSets > 0 ? Math.min(10, (totalCompletedSets / totalPlannedSets) * 10) : 7;
+          }
+          
           const log = {
             id: `l${Date.now()}`,
             date: new Date().toISOString().split('T')[0],
             routineId: state.activeSession.routineId,
             duration,
-            effort: effort || 7,
+            effort: manualEffort !== undefined ? manualEffort : Math.round(calculatedEffort),
             sets: state.activeSession.sets,
           };
           return {

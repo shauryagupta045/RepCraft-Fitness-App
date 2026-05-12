@@ -92,13 +92,13 @@ export const MOCK_ROUTINES = [
 ];
 
 export const MOCK_WORKOUT_LOGS = [
-  { id: 'l1', date: '2025-06-07', routineId: 'r1', duration: 58, effort: 8 },
-  { id: 'l2', date: '2025-06-06', routineId: 'r2', duration: 62, effort: 7 },
-  { id: 'l3', date: '2025-06-05', routineId: 'r3', duration: 71, effort: 9 },
-  { id: 'l4', date: '2025-06-04', routineId: 'r1', duration: 55, effort: 7 },
-  { id: 'l5', date: '2025-06-03', routineId: 'r2', duration: 68, effort: 6 },
-  { id: 'l6', date: '2025-05-31', routineId: 'r3', duration: 75, effort: 9 },
-  { id: 'l7', date: '2025-05-30', routineId: 'r1', duration: 52, effort: 7 },
+  { id: 'l1', date: '2026-05-11', routineId: 'r1', duration: 58, effort: 8, sets: { 'e1': [{weight: 80, reps: 8}, {weight: 80, reps: 8}], 'e2': [{weight: 32, reps: 10}] } },
+  { id: 'l2', date: '2026-05-10', routineId: 'r2', duration: 62, effort: 7, sets: { 'e6': [{weight: 120, reps: 5}] } },
+  { id: 'l3', date: '2026-05-09', routineId: 'r3', duration: 71, effort: 9, sets: { 'e11': [{weight: 100, reps: 6}] } },
+  { id: 'l4', date: '2026-05-08', routineId: 'r1', duration: 55, effort: 7, sets: { 'e1': [{weight: 80, reps: 8}] } },
+  { id: 'l5', date: '2026-05-07', routineId: 'r2', duration: 68, effort: 6, sets: { 'e6': [{weight: 110, reps: 5}] } },
+  { id: 'l6', date: '2026-05-05', routineId: 'r3', duration: 75, effort: 9, sets: { 'e11': [{weight: 105, reps: 6}] } },
+  { id: 'l7', date: '2026-05-04', routineId: 'r1', duration: 52, effort: 7, sets: { 'e1': [{weight: 75, reps: 8}] } },
 ];
 
 export const MOCK_DIET_TARGETS = {

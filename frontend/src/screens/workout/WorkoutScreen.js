@@ -3,7 +3,7 @@
  * Material top tabs: My Routine | Cardio | Hyrox
  * Each tab fully redesigned to match Stitch
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, TextInput, Platform,
@@ -15,6 +15,11 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { useAuthStore } from '../../store/authStore';
 import { useWorkoutStore } from '../../store/workoutStore';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { LocationService } from '../../services/locationService';
+import { PedometerService } from '../../services/sensors/pedometerService';
+const MapView = Platform.OS !== 'web' ? require('react-native-maps').default : View;
+const Polyline = Platform.OS !== 'web' ? require('react-native-maps').Polyline : View;
+const Marker = Platform.OS !== 'web' ? require('react-native-maps').Marker : View;
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -23,22 +28,63 @@ const Tab = createMaterialTopTabNavigator();
    Stitch: list of day cards — coral day badge, title, muscle group, exercise chips
    + coral gradient "Start" button, floating + FAB
 ─────────────────────────────────────────────────────────────────────────────── */
-function MuscleRow({ label, pct, color }) {
-  return (
-    <View style={pS.muscleRow}>
-      <View style={pS.muscleLabelRow}>
-        <Text style={pS.muscleLabel}>{label}</Text>
-        <Text style={pS.musclePct}>{pct}%</Text>
-      </View>
-      <View style={pS.muscleTrack}>
-        <View style={[pS.muscleFill, { width: `${pct}%`, backgroundColor: color }]} />
-      </View>
-    </View>
-  );
-}
+
 
 function MyRoutineTab({ navigation }) {
-  const { routines } = useWorkoutStore();
+  const { routines, workoutLogs, cardioSessions, hyroxSessions } = useWorkoutStore();
+
+  const parseDurationToMinutes = (durationStr) => {
+    if (typeof durationStr === 'number') return durationStr;
+    if (!durationStr || typeof durationStr !== 'string') return 0;
+    const parts = durationStr.split(':');
+    if (parts.length === 3) {
+      return parseInt(parts[0]) * 60 + parseInt(parts[1]) + parseInt(parts[2]) / 60;
+    } else if (parts.length === 2) {
+      return parseInt(parts[0]) + parseInt(parts[1]) / 60;
+    }
+    return parseFloat(durationStr) || 0;
+  };
+
+  const performanceScore = useMemo(() => {
+    const today = new Date();
+    const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const relevantWorkouts = workoutLogs.filter(log => new Date(log.date) >= sevenDaysAgo);
+    const relevantCardio = cardioSessions.filter(s => new Date(s.date) >= sevenDaysAgo);
+    const relevantHyrox = hyroxSessions.filter(s => new Date(s.date) >= sevenDaysAgo);
+
+    if (relevantWorkouts.length === 0 && relevantCardio.length === 0 && relevantHyrox.length === 0) return 85; 
+
+    let totalScore = 0;
+    let counts = 0;
+
+    relevantWorkouts.forEach(log => {
+      totalScore += (log.effort || 0) * 10;
+      counts++;
+    });
+
+    relevantCardio.forEach(s => {
+      const dur = parseFloat(s.duration) || 0;
+      const rpeVal = parseFloat(s.rpe) || 0;
+      const sessionScore = Math.min(100, (dur / 30) * 50 + (rpeVal / 10) * 50);
+      if (!isNaN(sessionScore)) {
+        totalScore += sessionScore;
+        counts++;
+      }
+    });
+
+    relevantHyrox.forEach(s => {
+      const dur = parseDurationToMinutes(s.duration);
+      const diff = parseFloat(s.difficulty) || 0;
+      const sessionScore = Math.min(100, (dur / 30) * 50 + (diff / 5) * 50);
+      if (!isNaN(sessionScore)) {
+        totalScore += sessionScore;
+        counts++;
+      }
+    });
+
+    return counts > 0 ? Math.round(totalScore / counts) : 85;
+  }, [workoutLogs, cardioSessions, hyroxSessions]);
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
@@ -57,20 +103,20 @@ function MyRoutineTab({ navigation }) {
         ) : (
           routines.map((r, index) => <RoutineCard key={r.id} routine={r} navigation={navigation} index={index} />)
         )}
-        
+
         {/* Performance Section */}
         <View style={pS.perfScoreCard}>
           <Text style={pS.perfScoreTitle}>PERFORMANCE SCORE</Text>
           <View style={pS.perfScoreRow}>
             <View>
-              <Text style={pS.perfScoreVal}>94%</Text>
+              <Text style={pS.perfScoreVal}>{performanceScore}%</Text>
               <Text style={pS.perfScoreSub}>Top 5% in your bracket</Text>
             </View>
             <View style={pS.perfScoreChart}>
-               <View style={[pS.bar, {height: 20, backgroundColor: 'rgba(23,88,77,0.3)'}]} />
-               <View style={[pS.bar, {height: 35, backgroundColor: 'rgba(23,88,77,0.3)'}]} />
-               <View style={[pS.bar, {height: 50, backgroundColor: '#17584D'}]} />
-               <View style={[pS.bar, {height: 25, backgroundColor: 'rgba(23,88,77,0.3)'}]} />
+              <View style={[pS.bar, { height: 20, backgroundColor: 'rgba(23,88,77,0.3)' }]} />
+              <View style={[pS.bar, { height: 35, backgroundColor: 'rgba(23,88,77,0.3)' }]} />
+              <View style={[pS.bar, { height: 50, backgroundColor: '#17584D' }]} />
+              <View style={[pS.bar, { height: 25, backgroundColor: 'rgba(23,88,77,0.3)' }]} />
             </View>
           </View>
         </View>
@@ -93,26 +139,18 @@ function MyRoutineTab({ navigation }) {
             <Text style={pS.statSubLight}>BENCH PRESS</Text>
           </View>
           <View style={[pS.statCard, SHADOWS.sm]}>
-             <Ionicons name="flame" size={20} color="#D96055" style={{marginBottom: 8}} />
-             <Text style={pS.statVal}>12k</Text>
-             <Text style={pS.statSubLight}>KCAL</Text>
+            <Ionicons name="flame" size={20} color="#D96055" style={{ marginBottom: 8 }} />
+            <Text style={pS.statVal}>12k</Text>
+            <Text style={pS.statSubLight}>KCAL</Text>
           </View>
           <View style={[pS.statCard, SHADOWS.sm]}>
-             <Ionicons name="stopwatch" size={20} color="#17584D" style={{marginBottom: 8}} />
-             <Text style={pS.statVal}>34h</Text>
-             <Text style={pS.statSubLight2}>UPTIME</Text>
+            <Ionicons name="stopwatch" size={20} color="#17584D" style={{ marginBottom: 8 }} />
+            <Text style={pS.statVal}>34h</Text>
+            <Text style={pS.statSubLight2}>UPTIME</Text>
           </View>
         </View>
 
-        <View style={[pS.muscleCard, SHADOWS.sm]}>
-           <Text style={pS.muscleTitle}>MUSCLE FOCUS DISTRIBUTION</Text>
-           <MuscleRow label="CHEST" pct={25} color="#D96055" />
-           <MuscleRow label="BACK" pct={20} color="#17584D" />
-           <MuscleRow label="SHOULDERS" pct={15} color="#D96055" />
-           <MuscleRow label="ABDOMINAL" pct={10} color="#17584D" />
-           <MuscleRow label="LEGS" pct={20} color="#D96055" />
-           <MuscleRow label="ARMS" pct={10} color="#17584D" />
-        </View>
+
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -141,37 +179,35 @@ function RoutineCard({ routine, navigation, index }) {
   const mockSetsReps = isFirst ? ["4 x 8-10", "3 x 12", "3 x 15"] : ["5 x 5", "4 x 12", "3 x 15"];
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[rS.card, SHADOWS.md]}
       activeOpacity={0.9}
       onPress={() => navigation.navigate('RoutineBuilder', { routineId: routine.id })}
     >
       <View style={rS.cardHeader}>
         <View style={[rS.dayPill, { backgroundColor: pillBg }]}>
-          <Text style={[rS.dayPillText, { color: pillText }]}>{isFirst ? "MONDAY" : "WEDNESDAY"}</Text>
+          <Text style={[rS.dayPillText, { color: pillText }]}>{routine.day.toUpperCase()}</Text>
         </View>
       </View>
 
-      <Text style={rS.cardTitle}>{isFirst ? "Chest Day" : "Back & Pull"}</Text>
+      <Text style={rS.cardTitle}>{routine.title}</Text>
       <Text style={rS.cardDesc}>
-        {isFirst 
-         ? "Focus on eccentric control and peak contraction for hypertrophy." 
-         : "High volume vertical and horizontal pulling movements."}
+        {routine.muscleGroup} focused training day.
       </Text>
 
       <View style={rS.exerciseList}>
         {preview.map((ex, i) => (
           <View key={ex.id} style={rS.exerciseListItem}>
-             <View style={rS.exLeft}>
-               <View style={rS.exBullet} />
-               <Text style={rS.exName}>{ex.name}</Text>
-             </View>
-             <Text style={rS.exSetsReps}>{mockSetsReps[i] || "3 x 10"}</Text>
+            <View style={rS.exLeft}>
+              <View style={rS.exBullet} />
+              <Text style={rS.exName}>{ex.name}</Text>
+            </View>
+            <Text style={rS.exSetsReps}>{mockSetsReps[i] || "3 x 10"}</Text>
           </View>
         ))}
       </View>
 
-      {isFirst ? (
+      {routine.day === ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date().getDay()] ? (
         <TouchableOpacity
           onPress={() => navigation.navigate('ActiveWorkout', { routine })}
           activeOpacity={0.88}
@@ -183,16 +219,16 @@ function RoutineCard({ routine, navigation, index }) {
             style={rS.startGrad}
           >
             <Text style={rS.startText}>Start Routine</Text>
-            <Ionicons name="play" size={12} color="#fff" style={{marginLeft: 6}} />
+            <Ionicons name="play" size={12} color="#fff" style={{ marginLeft: 6 }} />
           </LinearGradient>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
-          onPress={() => navigation.navigate('ActiveWorkout', { routine })}
+          onPress={() => navigation.navigate('RoutineBuilder', { routineId: routine.id })}
           activeOpacity={0.88}
           style={rS.viewBtn}
         >
-          <Text style={rS.viewText}>View Routine</Text>
+          <Text style={rS.viewText}>View & Edit Routine</Text>
         </TouchableOpacity>
       )}
     </TouchableOpacity>
@@ -244,14 +280,6 @@ const pS = StyleSheet.create({
   statDelta: { fontFamily: FONTS.bold, fontSize: 10, color: '#49A28A' },
   statSubLight: { fontFamily: FONTS.bold, fontSize: 10, color: '#EDC9C7' },
   statSubLight2: { fontFamily: FONTS.bold, fontSize: 10, color: '#F1A9A0' },
-  muscleCard: { backgroundColor: COLORS.surface, borderRadius: 24, padding: 20 },
-  muscleTitle: { fontFamily: FONTS.bold, fontSize: 11, color: '#EDC9C7', letterSpacing: 1, marginBottom: 20 },
-  muscleRow: { marginBottom: 14 },
-  muscleLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  muscleLabel: { fontFamily: FONTS.bold, fontSize: 11, color: COLORS.textDark },
-  musclePct: { fontFamily: FONTS.bold, fontSize: 11, color: COLORS.textDark },
-  muscleTrack: { height: 6, backgroundColor: '#F0F0F0', borderRadius: 3, overflow: 'hidden' },
-  muscleFill: { height: '100%', borderRadius: 3 },
 });
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -260,222 +288,646 @@ const pS = StyleSheet.create({
    RPE selector (dots), save button, past sessions list with teal left border
 ─────────────────────────────────────────────────────────────────────────────── */
 const CARDIO_TYPES = [
-  { label: 'Run',   icon: 'walk-outline' },
-  { label: 'Cycle', icon: 'bicycle-outline' },
-  { label: 'Row',   icon: 'boat-outline' },
-  { label: 'Swim',  icon: 'water-outline' },
-  { label: 'HIIT',  icon: 'flash-outline' },
+  { label: 'Run', icon: 'walk-outline', color: '#FF7669' },
+  { label: 'Cycle', icon: 'bicycle-outline', color: '#4ECDC4' },
+  { label: 'Treadmill', icon: 'speedometer-outline', color: '#6C8FC7' },
+  { label: 'Stairclimber', icon: 'trending-up-outline', color: '#F5A623' },
+  { label: 'Walk', icon: 'walk', color: '#27AE60' },
+  { label: 'Swim', icon: 'water-outline', color: '#3498DB' },
+  { label: 'Indoor Cycling', icon: 'bicycle', color: '#9B59B6' },
+  { label: 'Custom', icon: 'ellipsis-horizontal-outline', color: '#95A5A6' },
 ];
 
 function CardioTab() {
   const { cardioSessions, addCardioSession } = useWorkoutStore();
-  const [type, setType]         = useState('Run');
+  const [type, setType] = useState('Run');
   const [duration, setDuration] = useState('');
   const [distance, setDistance] = useState('');
-  const [rpe, setRpe]           = useState(6);
-  const [notes, setNotes]       = useState('');
-  const [saved, setSaved]       = useState(false);
+  const [heartRate, setHeartRate] = useState('--');
+  const [viewMode, setViewMode] = useState('PACE'); // 'PACE' or 'SPEED'
+  const [rpe, setRpe] = useState(7);
+  const [calories, setCalories] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  // Active Tracking State
+  const [isTracking, setIsTracking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [route, setRoute] = useState([]);
+  const [liveDistance, setLiveDistance] = useState(0);
+  const [liveSteps, setLiveSteps] = useState(0);
+
+  useEffect(() => {
+    let interval;
+    let locationSub;
+    let pedometerSub;
+
+    if (isTracking && !isPaused) {
+      interval = setInterval(() => setElapsedSeconds(s => s + 1), 1000);
+
+      const startTracking = async () => {
+        locationSub = await LocationService.watchPosition((coords) => {
+          setRoute(prev => {
+            const last = prev[prev.length - 1];
+            if (last) {
+              const d = LocationService.calculateDistance(last.latitude, last.longitude, coords.latitude, coords.longitude);
+              setLiveDistance(dist => dist + d);
+            }
+            return [...prev, coords];
+          });
+        });
+
+        const isPedoAvail = await PedometerService.isAvailable();
+        if (isPedoAvail) {
+          pedometerSub = PedometerService.subscribe((steps) => {
+            setLiveSteps(s => s + steps);
+          });
+        }
+      };
+      startTracking();
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+      if (locationSub && locationSub.remove) locationSub.remove();
+      if (pedometerSub && pedometerSub.remove) pedometerSub.remove();
+    };
+  }, [isTracking, isPaused]);
+
+  const formatTime = (totalSeconds) => {
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    return `${hrs > 0 ? hrs + ':' : ''}${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const calculatePace = () => {
+    const timeInMins = isTracking ? elapsedSeconds / 60 : parseFloat(duration) || 0;
+    const distInKm = isTracking ? liveDistance : parseFloat(distance) || 0;
+    if (timeInMins === 0 || distInKm === 0) return '0:00';
+
+    const paceSecondsPerKm = (timeInMins * 60) / distInKm;
+    const min = Math.floor(paceSecondsPerKm / 60);
+    const sec = Math.round(paceSecondsPerKm % 60);
+    return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+  };
+
+  const calculateSpeed = () => {
+    const timeInHrs = isTracking ? elapsedSeconds / 3600 : (parseFloat(duration) || 0) / 60;
+    const distInKm = isTracking ? liveDistance : parseFloat(distance) || 0;
+    if (timeInHrs === 0 || distInKm === 0) return '0.0';
+    return (distInKm / timeInHrs).toFixed(1);
+  };
+
+  const startTracking = () => {
+    setElapsedSeconds(0);
+    setLiveDistance(0);
+    setLiveSteps(0);
+    setRoute([]);
+    setIsPaused(false);
+    setIsTracking(true);
+  };
+
+  const stopTracking = () => {
+    setIsTracking(false);
+    setDuration(Math.round(elapsedSeconds / 60).toString());
+    setDistance(liveDistance.toFixed(2));
+  };
 
   const save = () => {
-    if (!duration) return;
+    const finalDuration = isTracking ? Math.round(elapsedSeconds / 60) : parseInt(duration);
+    const finalDistance = isTracking ? liveDistance : parseFloat(distance);
+
+    if (!finalDuration && !isTracking) return;
+
     addCardioSession({
-      type, duration: parseInt(duration),
-      distance: parseFloat(distance) || 0,
-      rpe, notes,
+      type,
+      duration: finalDuration,
+      distance: finalDistance || 0,
+      heartRate: heartRate === '--' ? null : parseInt(heartRate),
+      rpe,
+      calories: parseInt(calories) || 0,
+      notes,
+      route: route.length > 0 ? route : null,
       date: new Date().toISOString().split('T')[0],
     });
-    setDuration(''); setDistance(''); setNotes('');
+
+    setDuration(''); setDistance(''); setNotes(''); setCalories('');
+    setRoute([]); setLiveDistance(0); setElapsedSeconds(0);
+    setIsTracking(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: COLORS.background }}
-      contentContainerStyle={cS.scroll}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Activity type row */}
-      <Text style={cS.sectionTitle}>Activity Type</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.lg }}>
-        {CARDIO_TYPES.map(t => (
-          <TouchableOpacity
-            key={t.label}
-            onPress={() => setType(t.label)}
-            style={[cS.typePill, type === t.label && cS.typePillActive]}
-          >
-            <Ionicons name={t.icon} size={16} color={type === t.label ? '#fff' : COLORS.textMuted} />
-            <Text style={[cS.typePillText, type === t.label && { color: '#fff' }]}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={cS.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        {!isTracking ? (
+          <>
+            <Text style={cS.selectActivityTitle}>SELECT ACTIVITY</Text>
 
-      {/* Input card */}
-      <View style={[cS.inputCard, SHADOWS.card]}>
-        <View style={cS.inputRow}>
-          <View style={{ flex: 1, marginRight: SPACING.sm }}>
-            <Text style={cS.label}>Duration (min)</Text>
-            <View style={cS.field}>
-              <Ionicons name="time-outline" size={16} color={COLORS.textMuted} style={{ marginRight: 6 }} />
-              <TextInput
-                style={cS.fieldInput}
-                value={duration}
-                onChangeText={setDuration}
-                keyboardType="number-pad"
-                placeholder="35"
-                placeholderTextColor={COLORS.textMuted}
-              />
+            {/* Activity Grid */}
+            <View style={cS.activityGrid}>
+              {CARDIO_TYPES.map(t => (
+                <TouchableOpacity
+                  key={t.label}
+                  onPress={() => setType(t.label)}
+                  style={[
+                    cS.activityCard,
+                    type === t.label && { backgroundColor: t.color, borderColor: t.color }
+                  ]}
+                >
+                  <Ionicons
+                    name={t.icon}
+                    size={24}
+                    color={type === t.label ? '#fff' : t.color}
+                    style={{ marginBottom: 8 }}
+                  />
+                  <Text style={[cS.activityCardText, type === t.label && { color: '#fff' }]}>
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={cS.label}>Distance (km)</Text>
-            <View style={cS.field}>
-              <Ionicons name="navigate-outline" size={16} color={COLORS.textMuted} style={{ marginRight: 6 }} />
-              <TextInput
-                style={cS.fieldInput}
-                value={distance}
-                onChangeText={setDistance}
-                keyboardType="decimal-pad"
-                placeholder="5.2"
-                placeholderTextColor={COLORS.textMuted}
-              />
-            </View>
-          </View>
-        </View>
 
-        <Text style={cS.label}>Effort / RPE  <Text style={{ color: COLORS.primary, fontFamily: FONTS.black }}>{rpe}</Text>/10</Text>
-        <View style={cS.rpeRow}>
-          {[1,2,3,4,5,6,7,8,9,10].map(n => (
-            <TouchableOpacity
-              key={n}
-              onPress={() => setRpe(n)}
-              style={[cS.rpeDot, n <= rpe && { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}
-            >
-              <Text style={[cS.rpeDotText, n <= rpe && { color: '#fff' }]}>{n}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={cS.label}>Notes (optional)</Text>
-        <TextInput
-          style={cS.notesInput}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Easy zone 2 run..."
-          placeholderTextColor={COLORS.textMuted}
-          multiline
-        />
-      </View>
-
-      {/* Save */}
-      <TouchableOpacity onPress={save} activeOpacity={0.88} style={cS.saveBtn}>
-        <LinearGradient
-          colors={[COLORS.primary, '#D96055']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-          style={cS.saveGrad}
-        >
-          <Ionicons name={saved ? 'checkmark-circle' : 'save-outline'} size={18} color="#fff" />
-          <Text style={cS.saveText}>{saved ? 'Saved!' : 'Log Session'}</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-
-      {/* Past sessions */}
-      {cardioSessions.length > 0 && (
-        <>
-          <Text style={cS.sectionTitle}>Recent Sessions</Text>
-          {cardioSessions.map(s => (
-            <View key={s.id} style={[cS.sessionCard, SHADOWS.card]}>
-              <View style={cS.sessionAccent} />
-              <View style={{ flex: 1 }}>
-                <View style={cS.sessionTop}>
-                  <Text style={cS.sessionType}>{s.type}</Text>
-                  <View style={cS.rpeBadge}>
-                    <Text style={cS.rpeBadgeText}>RPE {s.rpe}</Text>
-                  </View>
+            {/* Manual Entry or Start Button */}
+            <View style={[cS.logCard, SHADOWS.card]}>
+              <TouchableOpacity
+                onPress={startTracking}
+                activeOpacity={0.9}
+                style={[cS.startTrackerBtn, { backgroundColor: CARDIO_TYPES.find(t => t.label === type)?.color || COLORS.primary }]}
+              >
+                <Ionicons name="play-circle" size={32} color="#fff" />
+                <View style={{ marginLeft: 16 }}>
+                  <Text style={cS.startTrackerTitle}>Start Tracking {type}</Text>
+                  <Text style={cS.startTrackerSub}>GPS & Pedometer Enabled</Text>
                 </View>
-                <View style={cS.sessionMeta}>
-                  <Ionicons name="time-outline" size={12} color={COLORS.textMuted} />
-                  <Text style={cS.sessionMetaText}>{s.duration} min</Text>
-                  {s.distance > 0 && (
-                    <>
-                      <Ionicons name="navigate-outline" size={12} color={COLORS.textMuted} style={{ marginLeft: 10 }} />
-                      <Text style={cS.sessionMetaText}>{s.distance} km</Text>
-                    </>
-                  )}
-                  <Text style={cS.sessionDate}>{s.date}</Text>
+              </TouchableOpacity>
+
+              <View style={cS.dividerRow}>
+                <View style={cS.dividerLine} />
+                <Text style={cS.dividerText}>OR MANUAL ENTRY</Text>
+                <View style={cS.dividerLine} />
+              </View>
+
+              <View style={cS.logRow}>
+                <View style={cS.logCol}>
+                  <Text style={cS.logLabel}>DURATION</Text>
+                  <View style={cS.logValueRow}>
+                    <TextInput
+                      style={cS.logInput}
+                      value={duration}
+                      onChangeText={setDuration}
+                      keyboardType="number-pad"
+                      placeholder="0"
+                      placeholderTextColor={COLORS.textLight}
+                    />
+                    <Text style={cS.logUnit}>min</Text>
+                  </View>
+                  <View style={[cS.logUnderline, { backgroundColor: CARDIO_TYPES.find(t => t.label === type)?.color || COLORS.primary }]} />
+                </View>
+                <View style={cS.logCol}>
+                  <Text style={cS.logLabel}>DISTANCE</Text>
+                  <View style={cS.logValueRow}>
+                    <TextInput
+                      style={cS.logInput}
+                      value={distance}
+                      onChangeText={setDistance}
+                      keyboardType="decimal-pad"
+                      placeholder="0.0"
+                      placeholderTextColor={COLORS.textLight}
+                    />
+                    <Text style={cS.logUnit}>km</Text>
+                  </View>
+                  <View style={cS.logUnderline} />
                 </View>
               </View>
-            </View>
-          ))}
-        </>
-      )}
 
-      <View style={{ height: 60 }} />
-    </ScrollView>
+              {/* Heart Rate Section */}
+              <View style={cS.hrContainer}>
+                <View style={cS.hrInfo}>
+                  <Ionicons name="heart" size={24} color="#FF7669" />
+                  <View style={{ marginLeft: 12 }}>
+                    <Text style={cS.hrLabel}>AVG HEART RATE</Text>
+                    <TextInput
+                      style={cS.hrValue}
+                      value={heartRate}
+                      onChangeText={setHeartRate}
+                      keyboardType="number-pad"
+                      placeholder="--"
+                    />
+                  </View>
+                </View>
+                <View style={cS.zoneBadge}>
+                  <Text style={cS.zoneText}>ZONE 2</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity onPress={save} activeOpacity={0.88} style={cS.logBtn}>
+                <LinearGradient
+                  colors={['#DE6659', '#F47F71']}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={cS.logBtnGrad}
+                >
+                  <Text style={cS.logBtnText}>{saved ? 'Logged!' : 'Log Manual Session'}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          /* ACTIVE TRACKING VIEW */
+          <View style={cS.activeContainer}>
+            <View style={[cS.activeHeader, { backgroundColor: CARDIO_TYPES.find(t => t.label === type)?.color || COLORS.primary }]}>
+              <Text style={cS.activeType}>{type.toUpperCase()}</Text>
+              <Text style={cS.activeTimer}>{formatTime(elapsedSeconds)}</Text>
+            </View>
+
+            <View style={cS.liveStatsGrid}>
+              <View style={cS.liveStatCard}>
+                <Text style={cS.liveStatLabel}>DISTANCE</Text>
+                <Text style={cS.liveStatValue}>{liveDistance.toFixed(2)} <Text style={cS.liveStatUnit}>km</Text></Text>
+              </View>
+              <View style={cS.liveStatCard}>
+                <Text style={cS.liveStatLabel}>PACE</Text>
+                <Text style={cS.liveStatValue}>{calculatePace()} <Text style={cS.liveStatUnit}>min/km</Text></Text>
+              </View>
+              <View style={cS.liveStatCard}>
+                <Text style={cS.liveStatLabel}>STEPS</Text>
+                <Text style={cS.liveStatValue}>{liveSteps} <Text style={cS.liveStatUnit}>pts</Text></Text>
+              </View>
+              <View style={cS.liveStatCard}>
+                <Text style={cS.liveStatLabel}>CALORIES</Text>
+                <Text style={cS.liveStatValue}>{Math.round(elapsedSeconds * 0.15)} <Text style={cS.liveStatUnit}>kcal</Text></Text>
+              </View>
+            </View>
+
+            {/* Live Map */}
+            <View style={cS.liveMapContainer}>
+              {Platform.OS !== 'web' ? (
+                <MapView
+                  style={cS.map}
+                  initialRegion={{
+                    latitude: route[0]?.latitude || 37.78825,
+                    longitude: route[0]?.longitude || -122.4324,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                  }}
+                  showsUserLocation
+                >
+                  {route.length > 0 && (
+                    <Polyline
+                      coordinates={route}
+                      strokeColor="#FF7669"
+                      strokeWidth={4}
+                    />
+                  )}
+                </MapView>
+              ) : (
+                <View style={cS.mapPlaceholder}>
+                  <Ionicons name="navigate" size={48} color={COLORS.textLight} />
+                  <Text style={cS.mapPlaceholderText}>Live GPS Tracking Active</Text>
+                  <Text style={cS.mapPlaceholderSub}>{route.length} points recorded</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={cS.activeControls}>
+              <TouchableOpacity
+                onPress={() => setIsPaused(!isPaused)}
+                style={cS.pauseBtn}
+              >
+                <Ionicons name={isPaused ? "play" : "pause"} size={32} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={stopTracking}
+                style={cS.stopBtn}
+              >
+                <Text style={cS.stopBtnText}>FINISH</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Pace / Speed Toggle (Only for manual/review) */}
+        {!isTracking && (
+          <View style={[cS.logCard, SHADOWS.card, { marginTop: -16 }]}>
+            <View style={cS.paceSpeedHeader}>
+              <Text style={cS.logLabel}>PACE / SPEED</Text>
+              <View style={cS.toggleContainer}>
+                <TouchableOpacity
+                  onPress={() => setViewMode('PACE')}
+                  style={[cS.toggleBtn, viewMode === 'PACE' && cS.toggleBtnActive]}
+                >
+                  <Text style={[cS.toggleText, viewMode === 'PACE' && cS.toggleTextActive]}>PACE</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setViewMode('SPEED')}
+                  style={[cS.toggleBtn, viewMode === 'SPEED' && cS.toggleBtnActive]}
+                >
+                  <Text style={[cS.toggleText, viewMode === 'SPEED' && cS.toggleTextActive]}>SPEED</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={cS.calcBox}>
+              <Text style={cS.calcValue}>
+                {viewMode === 'PACE' ? calculatePace() : calculateSpeed()}
+              </Text>
+              <Text style={cS.calcUnit}>
+                {viewMode === 'PACE' ? 'min/km' : 'km/h'}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Calories & Notes */}
+        <View style={cS.bottomInputs}>
+          <View style={{ flex: 1, marginRight: 16 }}>
+            <Text style={cS.logLabel}>CALORIES</Text>
+            <TextInput
+              style={cS.miniInput}
+              value={calories}
+              onChangeText={setCalories}
+              keyboardType="number-pad"
+              placeholder="0"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={cS.logLabel}>NOTES</Text>
+            <TextInput
+              style={cS.miniInput}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Route..."
+              multiline={false}
+            />
+          </View>
+        </View>
+
+        {/* Map Section (Run/Walk Only) */}
+        {(type === 'Run' || type === 'Walk') && (
+          <View style={cS.mapSection}>
+            <Text style={cS.logLabel}>ROUTE MAP</Text>
+            <View style={cS.mapPlaceholder}>
+              <Ionicons name="map-outline" size={32} color={COLORS.textLight} />
+              <Text style={cS.mapText}>GPS Route Tracked</Text>
+              <View style={cS.mapLine} />
+            </View>
+          </View>
+        )}
+
+        <TouchableOpacity onPress={save} activeOpacity={0.88} style={cS.logBtn}>
+          <LinearGradient
+            colors={['#DE6659', '#F47F71']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={cS.logBtnGrad}
+          >
+            <Text style={cS.logBtnText}>{saved ? 'Logged!' : 'Log Session'}</Text>
+            <Ionicons name="play" size={14} color="#fff" style={{ marginLeft: 8 }} />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Past sessions */}
+        {cardioSessions.length > 0 && (
+          <>
+            <View style={cS.historyHeader}>
+              <Text style={cS.historyTitle}>Recent Sessions</Text>
+              <TouchableOpacity><Text style={cS.seeAll}>SEE ALL</Text></TouchableOpacity>
+            </View>
+            {cardioSessions.map(s => (
+              <View key={s.id} style={[cS.sessionItem, SHADOWS.sm]}>
+                <View style={cS.sessionIconBox}>
+                  <Ionicons
+                    name={CARDIO_TYPES.find(t => t.label === s.type)?.icon || 'walk'}
+                    size={20}
+                    color={CARDIO_TYPES.find(t => t.label === s.type)?.color || COLORS.primary}
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={cS.sessionTitleText}>{s.type === 'Run' ? 'Morning Tempo Run' : s.type}</Text>
+                  <Text style={cS.sessionMetaText}>{s.date} • {s.duration}m {s.calories ? `• ${s.calories} kcal` : ''}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={cS.sessionDistText}>{s.distance} km</Text>
+                  <View style={cS.rpeBadgeSmall}>
+                    <Text style={cS.rpeBadgeTextSmall}>RPE {s.rpe}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </>
+        )}
+
+        <View style={{ height: 60 }} />
+      </ScrollView>
+    </View>
   );
 }
 
 const cS = StyleSheet.create({
-  scroll: { padding: SPACING.lg },
-  sectionTitle: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.textDark, marginBottom: SPACING.md },
-  typePill: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.pill,
-    paddingHorizontal: 16, paddingVertical: 9,
-    borderWidth: 1.5, borderColor: COLORS.border,
-    marginRight: SPACING.sm,
+  scroll: { padding: SPACING.lg, paddingBottom: 100 },
+  selectActivityTitle: { fontFamily: FONTS.bold, fontSize: 12, color: COLORS.textMid, letterSpacing: 1, marginBottom: 20 },
+
+  activityGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 },
+  activityCard: {
+    width: '31%',
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    paddingVertical: 20,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    ...Platform.select({
+      web: { boxShadow: '0px 4px 12px rgba(0,0,0,0.03)' },
+      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 12, elevation: 2 }
+    })
   },
-  typePillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  typePillText: { fontFamily: FONTS.medium, fontSize: 13, color: COLORS.textMuted, marginLeft: 6 },
-  inputCard: { backgroundColor: COLORS.surface, borderRadius: RADIUS.card, padding: SPACING.lg, marginBottom: SPACING.lg },
-  inputRow: { flexDirection: 'row', marginBottom: SPACING.md },
-  label: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.textMuted, marginBottom: 6, letterSpacing: 0.3 },
-  field: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: RADIUS.input, paddingHorizontal: 12,
-    backgroundColor: COLORS.background,
+  activityCardText: { fontFamily: FONTS.bold, fontSize: 13, color: COLORS.textMid, marginTop: 4 },
+
+  logCard: { backgroundColor: COLORS.surface, borderRadius: 28, padding: 24, marginBottom: 32 },
+  logRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
+  logCol: { width: '45%' },
+  logLabel: { fontFamily: FONTS.bold, fontSize: 11, color: COLORS.textMid, letterSpacing: 0.5, marginBottom: 8 },
+  logValueRow: { flexDirection: 'row', alignItems: 'baseline' },
+  logInput: { fontFamily: FONTS.black, fontSize: 36, color: COLORS.textDark, marginRight: 8, padding: 0 },
+  logUnit: { fontFamily: FONTS.bold, fontSize: 16, color: COLORS.textLight },
+  logUnderline: { height: 3, backgroundColor: COLORS.border, borderRadius: 2, marginTop: 8, width: '100%' },
+
+  hrContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8F9FD',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 24
   },
-  fieldInput: {
-    flex: 1, fontFamily: FONTS.regular, fontSize: 15,
-    color: COLORS.textDark, paddingVertical: 11,
+  hrInfo: { flexDirection: 'row', alignItems: 'center' },
+  hrLabel: { fontFamily: FONTS.bold, fontSize: 10, color: COLORS.textMid, letterSpacing: 0.5 },
+  hrValue: { fontFamily: FONTS.black, fontSize: 20, color: COLORS.textDark, padding: 0, marginTop: -4 },
+  zoneBadge: { backgroundColor: '#E1F5F1', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  zoneText: { fontFamily: FONTS.bold, fontSize: 10, color: '#49A28A' },
+
+  paceSpeedHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  toggleContainer: { flexDirection: 'row', backgroundColor: '#EDF1F7', borderRadius: 12, padding: 4 },
+  toggleBtn: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 8 },
+  toggleBtnActive: { backgroundColor: '#FFFFFF' },
+  toggleText: { fontFamily: FONTS.bold, fontSize: 10, color: COLORS.textMid },
+  toggleTextActive: { color: COLORS.textDark },
+
+  calcBox: { alignItems: 'center', marginBottom: 24 },
+  calcValue: { fontFamily: FONTS.black, fontSize: 24, color: COLORS.textDark },
+  calcUnit: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.textLight },
+
+  rpeHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  rpeValueText: { fontFamily: FONTS.black, fontSize: 20, color: '#FF7669' },
+  rpeScale: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
+  rpeCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#F0F2F7',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
-  rpeRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.lg },
-  rpeDot: {
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: COLORS.background, borderWidth: 1.5, borderColor: COLORS.border,
-    alignItems: 'center', justifyContent: 'center',
-    marginRight: 5, marginBottom: 5,
+  rpeCircleText: { fontFamily: FONTS.bold, fontSize: 12, color: '#fff' },
+
+  bottomInputs: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
+  miniInput: {
+    fontFamily: FONTS.bold,
+    fontSize: 18,
+    color: COLORS.textDark,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    paddingVertical: 8
   },
-  rpeDotText: { fontFamily: FONTS.bold, fontSize: 11, color: COLORS.textMuted },
-  notesInput: {
-    borderWidth: 1.5, borderColor: COLORS.border, borderRadius: RADIUS.input,
-    backgroundColor: COLORS.background, padding: 12,
-    fontFamily: FONTS.regular, fontSize: 14, color: COLORS.textDark,
-    minHeight: 60,
+
+  mapSection: { marginBottom: 24 },
+  mapPlaceholder: {
+    height: 120,
+    backgroundColor: '#F8F9FD',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed'
   },
-  saveBtn: { borderRadius: RADIUS.button, overflow: 'hidden', marginBottom: SPACING.xl },
-  saveGrad: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', paddingVertical: 14,
+  mapText: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.textMuted, marginTop: 8 },
+  mapLine: { position: 'absolute', width: '60%', height: 2, backgroundColor: '#FF766933', top: '50%' },
+
+  logBtn: { borderRadius: 24, overflow: 'hidden' },
+  logBtnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18 },
+  logBtnText: { fontFamily: FONTS.black, fontSize: 18, color: '#fff', letterSpacing: 0.5 },
+
+  /* Active Tracker Styles */
+  startTrackerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 20
   },
-  saveText: { fontFamily: FONTS.bold, fontSize: 15, color: '#fff', marginLeft: 8 },
-  sessionCard: {
-    flexDirection: 'row', backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.button, padding: SPACING.md,
-    marginBottom: SPACING.sm, overflow: 'hidden',
+  startTrackerTitle: { fontFamily: FONTS.black, fontSize: 18, color: '#fff' },
+  startTrackerSub: { fontFamily: FONTS.medium, fontSize: 12, color: 'rgba(255,255,255,0.8)' },
+
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: COLORS.border },
+  dividerText: { fontFamily: FONTS.bold, fontSize: 10, color: COLORS.textLight, marginHorizontal: 12 },
+
+  activeContainer: { flex: 1 },
+  activeHeader: {
+    padding: 32,
+    alignItems: 'center',
+    borderRadius: 24,
+    marginBottom: 20,
+    ...Platform.select({
+      web: { boxShadow: '0px 10px 20px rgba(0,0,0,0.1)' },
+      default: { elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20 }
+    })
   },
-  sessionAccent: { width: 4, backgroundColor: COLORS.secondary, borderRadius: 3, marginRight: SPACING.md },
-  sessionTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  sessionType: { fontFamily: FONTS.bold, fontSize: 14, color: COLORS.textDark },
-  rpeBadge: {
-    backgroundColor: COLORS.primary + '18', borderRadius: RADIUS.pill,
-    paddingHorizontal: 8, paddingVertical: 2,
+  activeType: { fontFamily: FONTS.bold, fontSize: 14, color: 'rgba(255,255,255,0.9)', letterSpacing: 2, marginBottom: 8 },
+  activeTimer: { fontFamily: FONTS.black, fontSize: 56, color: '#fff', letterSpacing: -1 },
+
+  liveStatsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 20 },
+  liveStatCard: {
+    width: '48%',
+    backgroundColor: COLORS.surface,
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 16,
+    ...SHADOWS.sm
   },
-  rpeBadgeText: { fontFamily: FONTS.bold, fontSize: 11, color: COLORS.primary },
-  sessionMeta: { flexDirection: 'row', alignItems: 'center' },
-  sessionMetaText: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.textMuted, marginLeft: 3 },
-  sessionDate: { fontFamily: FONTS.regular, fontSize: 11, color: COLORS.textMuted, flex: 1, textAlign: 'right' },
+  liveStatLabel: { fontFamily: FONTS.bold, fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.5, marginBottom: 4 },
+  liveStatValue: { fontFamily: FONTS.black, fontSize: 24, color: COLORS.textDark },
+  liveStatUnit: { fontSize: 12, color: COLORS.textLight },
+
+  liveMapContainer: {
+    height: 300,
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 24,
+    backgroundColor: '#EDF1F7',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  map: { width: '100%', height: '100%' },
+  mapPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  mapPlaceholderText: { fontFamily: FONTS.bold, fontSize: 16, color: COLORS.textMid, marginTop: 12 },
+  mapPlaceholderSub: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.textMuted, marginTop: 4 },
+
+  activeControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
+  pauseBtn: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#DE6659',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.md
+  },
+  stopBtn: {
+    flex: 1,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#1E2340',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.md
+  },
+  stopBtnText: { fontFamily: FONTS.black, fontSize: 20, color: '#fff', letterSpacing: 1 },
+
+  historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  historyTitle: { fontFamily: FONTS.bold, fontSize: 16, color: COLORS.textDark },
+  seeAll: { fontFamily: FONTS.bold, fontSize: 11, color: '#FF7669', letterSpacing: 0.5 },
+  sessionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12
+  },
+  sessionIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F8F9FD',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  sessionTitleText: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.textDark },
+  sessionMetaText: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  sessionDistText: { fontFamily: FONTS.bold, fontSize: 16, color: COLORS.textDark },
+  rpeBadgeSmall: { backgroundColor: '#FFF0EE', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginTop: 4 },
+  rpeBadgeTextSmall: { fontFamily: FONTS.bold, fontSize: 10, color: '#FF7669' },
 });
 
 
@@ -495,6 +947,37 @@ const HYROX_STATIONS = [
   { id: '08', name: 'Wall Balls', target: '75/100 REPS', metric: 'Weight' },
 ];
 
+const HYROX_RACE_SEQUENCE = [
+  { id: 'R1', name: '1km Run', type: 'run' },
+  { id: 'S1', name: 'SkiErg (1000m)', type: 'station' },
+  { id: 'R2', name: '1km Run', type: 'run' },
+  { id: 'S2', name: 'Sled Push (50m)', type: 'station' },
+  { id: 'R3', name: '1km Run', type: 'run' },
+  { id: 'S3', name: 'Sled Pull (50m)', type: 'station' },
+  { id: 'R4', name: '1km Run', type: 'run' },
+  { id: 'S4', name: 'Burpee Broad Jumps (80m)', type: 'station' },
+  { id: 'R5', name: '1km Run', type: 'run' },
+  { id: 'S5', name: 'Rowing (1000m)', type: 'station' },
+  { id: 'R6', name: '1km Run', type: 'run' },
+  { id: 'S6', name: 'Farmers Carry (200m)', type: 'station' },
+  { id: 'R7', name: '1km Run', type: 'run' },
+  { id: 'S7', name: 'Sandbag Lunges (100m)', type: 'station' },
+  { id: 'R8', name: '1km Run', type: 'run' },
+  { id: 'S8', name: 'Wall Balls (75/100)', type: 'station' },
+];
+
+const formatRaceTime = (totalSeconds) => {
+  if (isNaN(totalSeconds) || totalSeconds < 0) return "00:00";
+  const hours = Math.floor(totalSeconds / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  }
+  return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+};
+
 function Section({ title, label, children }) {
   return (
     <View style={hS.sectionContainer}>
@@ -507,10 +990,11 @@ function Section({ title, label, children }) {
   );
 }
 
+
 function HistoryItem({ session }) {
   const isRace = session.type === 'Race Simulation';
   const accent = isRace ? '#E8705E' : '#94A3B8';
-  
+
   // Extract drill stats if available
   const firstStnId = Object.keys(session.stationData || {})[0];
   const drillStats = !isRace && firstStnId ? session.stationData[firstStnId] : null;
@@ -522,16 +1006,21 @@ function HistoryItem({ session }) {
         <View style={hS.histTop}>
           <Text style={hS.histDate}>{session.date}</Text>
           <View style={hS.histRPE}>
-             <Ionicons name="star" size={10} color="#F97316" />
-             <Text style={hS.histRPEText}>{session.difficulty}</Text>
+            <Ionicons name="star" size={10} color="#F97316" />
+            <Text style={hS.histRPEText}>{session.difficulty}</Text>
           </View>
         </View>
-        
+
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <View>
             <Text style={hS.histDuration}>{session.duration}</Text>
             <Text style={hS.histTitle}>{session.title}</Text>
           </View>
+          {isRace && session.splits && (
+            <Text style={hS.histStats}>
+              {session.splits.filter(s => s.type === 'station').length} Stations Complete
+            </Text>
+          )}
           {drillStats && (
             <Text style={hS.histStats}>
               {drillStats.sets} Sets · {drillStats.weight}kg
@@ -544,6 +1033,8 @@ function HistoryItem({ session }) {
   );
 }
 
+
+
 function HyroxTab() {
   const { hyroxSessions, addHyroxSession } = useWorkoutStore();
   const [mode, setMode] = useState('Race'); // 'Race' or 'Drill'
@@ -553,40 +1044,109 @@ function HyroxTab() {
   const [drillTime, setDrillTime] = useState('04:20');
   const [drillWeight, setDrillWeight] = useState('80');
   const [selectorOpen, setSelectorOpen] = useState(false);
-  
+
   const [stationData, setStationData] = useState({});
   const [rpe, setRpe] = useState(5);
   const [notes, setNotes] = useState('');
   const [aggregateTime, setAggregateTime] = useState('01:24:15');
   const [saved, setSaved] = useState(false);
 
-  const selectedStn = HYROX_STATIONS.find(s => s.id === selectedStationId);
+  // Live Race Simulation State
+  const [raceActive, setRaceActive] = useState(false);
+  const [raceFinished, setRaceFinished] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [splits, setSplits] = useState([]); // [{ name, time, cumulative }]
 
+  useEffect(() => {
+    let interval;
+    if (raceActive) {
+      interval = setInterval(() => {
+        setElapsed(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [raceActive]);
+
+  const startRace = () => {
+    setRaceActive(true);
+    setRaceFinished(false);
+    setCurrentStep(0);
+    setElapsed(0);
+    setSplits([]);
+  };
+
+  const completeStep = () => {
+    const step = HYROX_RACE_SEQUENCE[currentStep];
+    const prevCumulative = splits.length > 0 ? splits[splits.length - 1].cumulative : 0;
+    const splitTime = elapsed - prevCumulative;
+
+    const newSplit = {
+      name: step.name,
+      type: step.type,
+      time: splitTime,
+      cumulative: elapsed
+    };
+
+    setSplits([...splits, newSplit]);
+
+    if (currentStep < HYROX_RACE_SEQUENCE.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      setRaceActive(false);
+      setRaceFinished(true);
+    }
+  };
+
+  const selectedStn = HYROX_STATIONS.find(s => s.id === selectedStationId);
   const raceLogs = (hyroxSessions || []).filter(s => s.type === 'Race Simulation');
   const drillLogs = (hyroxSessions || []).filter(s => s.type === 'Station Drill');
-
-  const updateStation = (id, field, value) => {
-    setStationData(prev => ({
-      ...prev,
-      [id]: { ...prev[id], [field]: value }
-    }));
-  };
 
   const save = () => {
     const isRace = mode === 'Race';
     addHyroxSession({
       type: isRace ? 'Race Simulation' : 'Station Drill',
       title: isRace ? 'Full Race Simulation' : `${selectedStn.name} Drill`,
-      duration: isRace ? aggregateTime : drillTime,
+      duration: isRace ? formatRaceTime(elapsed) : drillTime,
       difficulty: rpe,
-      notes: isRace ? notes : notes, // unified notes
-      stationData: isRace ? stationData : { [selectedStationId]: { time: drillTime, weight: drillWeight, sets: drillSets, rest: drillRest } },
+      notes: notes,
+      splits: isRace ? splits : null,
       date: new Date().toISOString().split('T')[0],
       timestamp: Date.now(),
     });
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => {
+      setSaved(false);
+      if (isRace) {
+        setRaceActive(false);
+        setRaceFinished(false);
+      }
+    }, 2000);
   };
+
+  // Stats calculation
+  const raceStats = useMemo(() => {
+    if (!raceFinished || splits.length === 0) return null;
+    const totalSeconds = splits[splits.length - 1].cumulative;
+    const stationSplits = splits.filter(s => s.type === 'station');
+    const runSplits = splits.filter(s => s.type === 'run');
+
+    const avgStation = stationSplits.length > 0 ? (stationSplits.reduce((acc, s) => acc + s.time, 0) / stationSplits.length) : 0;
+    const avgRun = runSplits.length > 0 ? (runSplits.reduce((acc, s) => acc + s.time, 0) / runSplits.length) : 0;
+
+    const sortedStations = [...stationSplits].sort((a, b) => a.time - b.time);
+    const fastest = sortedStations.length > 0 ? sortedStations[0] : { name: 'N/A' };
+    const slowest = sortedStations.length > 0 ? sortedStations[sortedStations.length - 1] : { name: 'N/A' };
+
+    return {
+      totalTime: formatRaceTime(totalSeconds),
+      avgStation: formatRaceTime(Math.round(avgStation)),
+      avgRunPace: formatRaceTime(Math.round(avgRun)),
+      fastest: fastest.name,
+      slowest: slowest.name,
+      calories: Math.round(totalSeconds * 0.18 * (rpe / 3)), // Mock formula
+    };
+  }, [raceFinished, splits, rpe]);
 
   return (
     <ScrollView
@@ -597,15 +1157,15 @@ function HyroxTab() {
       <View style={hS.headerSection}>
         <Text style={hS.pageHeader}>Hyrox Performance</Text>
         <Text style={hS.pageSubheader}>
-          {mode === 'Race' 
+          {mode === 'Race'
             ? "Precision tracking for the human laboratory. Map your race simulation with clinical accuracy."
             : "Focus on individual movement standards and station-specific power output."}
         </Text>
       </View>
 
       <View style={hS.selectionRow}>
-        <TouchableOpacity 
-          style={[hS.selectCard, mode === 'Race' && hS.selectCardActive]} 
+        <TouchableOpacity
+          style={[hS.selectCard, mode === 'Race' && hS.selectCardActive]}
           onPress={() => setMode('Race')}
         >
           <View style={hS.selectIconRow}>
@@ -618,12 +1178,12 @@ function HyroxTab() {
           <Text style={hS.selectDesc}>Full 8-station circuit with 1km run intervals.</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[hS.selectCard, mode === 'Drill' && hS.selectCardActive]} 
+        <TouchableOpacity
+          style={[hS.selectCard, mode === 'Drill' && hS.selectCardActive]}
           onPress={() => setMode('Drill')}
         >
           <View style={hS.selectIconRow}>
-             <View style={[hS.modeIconCircle, { backgroundColor: '#94A3B8' }]}>
+            <View style={[hS.modeIconCircle, { backgroundColor: '#94A3B8' }]}>
               <Ionicons name="barbell" size={18} color="#fff" />
             </View>
             {mode === 'Drill' && <Ionicons name="checkmark-circle" size={20} color="#94A3B8" />}
@@ -634,50 +1194,146 @@ function HyroxTab() {
       </View>
 
       {mode === 'Race' ? (
-        HYROX_STATIONS.map((stn, idx) => (
-          <View key={stn.id}>
-            <View style={[hS.stationCard, SHADOWS.card]}>
-              <View style={hS.stationAccent} />
-              <View style={hS.stnBadge}>
-                <Text style={hS.stnBadgePrefix}>STN</Text>
-                <Text style={hS.stnBadgeId}>{stn.id}</Text>
+        raceActive ? (
+          /* ACTIVE RACE VIEW */
+          <View style={hS.activeRaceContainer}>
+            <View style={hS.activeTimerCard}>
+              <Text style={hS.activeTimerLabel}>ELAPSED TIME</Text>
+              <Text style={hS.activeTimerVal}>{formatRaceTime(elapsed)}</Text>
+            </View>
+
+            <View style={hS.currentSegmentCard}>
+              <View style={hS.segmentHeader}>
+                <View style={[hS.segmentTypeBadge, { backgroundColor: HYROX_RACE_SEQUENCE[currentStep].type === 'run' ? '#4ECDC4' : '#F97316' }]}>
+                  <Text style={hS.segmentTypeBtnText}>{HYROX_RACE_SEQUENCE[currentStep].type.toUpperCase()}</Text>
+                </View>
+                <Text style={hS.segmentStepText}>STEP {currentStep + 1} OF 16</Text>
               </View>
-              <View style={hS.stnInfo}>
-                <Text style={hS.stnName}>{stn.name}</Text>
-                <Text style={hS.stnTarget}>{stn.target}</Text>
+              <Text style={hS.segmentName}>{HYROX_RACE_SEQUENCE[currentStep].name}</Text>
+
+              <TouchableOpacity onPress={completeStep} style={hS.completeBtn}>
+                <LinearGradient colors={['#E8705E', '#D96055']} style={hS.completeGrad}>
+                  <Text style={hS.completeBtnText}>TICK & CONTINUE</Text>
+                  <Ionicons name="checkmark-done" size={20} color="#fff" style={{ marginLeft: 10 }} />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+
+            <View style={hS.splitsList}>
+              <Text style={hS.splitsHeader}>SPLIT TIMES</Text>
+              {splits.slice().reverse().map((s, i) => (
+                <View key={i} style={hS.splitItem}>
+                  <Text style={hS.splitName}>{s.name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={hS.splitValue}>{formatRaceTime(s.time)}</Text>
+                    <View style={hS.splitDivider} />
+                    <Text style={hS.splitCumulative}>{formatRaceTime(s.cumulative)}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : raceFinished ? (
+          /* RACE SUMMARY VIEW */
+          <View style={hS.summaryContainer}>
+            <View style={hS.congratsCard}>
+              <Ionicons name="trophy" size={48} color="#FFD700" style={{ marginBottom: 12 }} />
+              <Text style={hS.congratsTitle}>Simulation Complete</Text>
+              <Text style={hS.congratsTime}>{raceStats.totalTime}</Text>
+              <Text style={hS.congratsSub}>TOTAL RACE DURATION</Text>
+            </View>
+
+            <View style={hS.statsGrid}>
+              <View style={hS.statRowItem}>
+                <Text style={hS.statRowLabel}>AVG RUN PACE</Text>
+                <Text style={hS.statRowVal}>{raceStats.avgRunPace}</Text>
               </View>
-              <View style={hS.stnInputs}>
-                <TextInput
-                  style={hS.miniInput}
-                  placeholder="MM:SS"
-                  placeholderTextColor="#94A3B8"
-                  value={stationData[stn.id]?.time || ''}
-                  onChangeText={v => updateStation(stn.id, 'time', v)}
-                />
-                {stn.metric && (
-                  <TextInput
-                    style={hS.miniInput}
-                    placeholder={stn.metric}
-                    placeholderTextColor="#94A3B8"
-                    value={stationData[stn.id]?.metric || ''}
-                    onChangeText={v => updateStation(stn.id, 'metric', v)}
-                  />
-                )}
+              <View style={hS.statRowItem}>
+                <Text style={hS.statRowLabel}>AVG STATION TIME</Text>
+                <Text style={hS.statRowVal}>{raceStats.avgStation}</Text>
+              </View>
+              <View style={hS.statRowItem}>
+                <Text style={hS.statRowLabel}>CALORIES BURNED</Text>
+                <Text style={hS.statRowVal}>{raceStats.calories} kcal</Text>
               </View>
             </View>
-            {idx < HYROX_STATIONS.length - 1 && (
-              <View style={hS.runDivider}>
-                <View style={hS.runPill}>
-                  <Text style={hS.runPillText}>1KM RUN INTERVAL</Text>
+
+            <View style={hS.analysisCard}>
+              <View style={hS.analysisItem}>
+                <Ionicons name="flash" size={20} color="#4ECDC4" />
+                <View style={{ marginLeft: 12 }}>
+                  <Text style={hS.analysisLabel}>FASTEST STATION</Text>
+                  <Text style={hS.analysisVal}>{raceStats.fastest}</Text>
                 </View>
               </View>
-            )}
+              <View style={hS.analysisItem}>
+                <Ionicons name="trending-down" size={20} color="#D96055" />
+                <View style={{ marginLeft: 12 }}>
+                  <Text style={hS.analysisLabel}>SLOWEST STATION</Text>
+                  <Text style={hS.analysisVal}>{raceStats.slowest}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={[hS.summaryCard, SHADOWS.lg, { backgroundColor: '#111827' }]}>
+              <Text style={hS.summaryLabel}>SESSION DIFFICULTY (RPE)</Text>
+              <View style={hS.starsRow}>
+                {[1, 2, 3, 4, 5].map(n => (
+                  <TouchableOpacity key={n} onPress={() => setRpe(n)}>
+                    <Ionicons
+                      name={n <= rpe ? 'star' : 'star-outline'}
+                      size={24}
+                      color={n <= rpe ? '#F97316' : '#475569'}
+                      style={{ marginRight: 8 }}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={hS.notesContainer}>
+              <Text style={hS.notesLabel}>RACE OBSERVATIONS</Text>
+              <TextInput
+                style={hS.notesInput}
+                multiline
+                placeholder="How was the transition? Fueling strategy..."
+                placeholderTextColor="#94A3B8"
+                value={notes}
+                onChangeText={setNotes}
+              />
+            </View>
           </View>
-        ))
+        ) : (
+          /* START SCREEN */
+          <View style={hS.startRaceScreen}>
+            <View style={hS.infoBox}>
+              <Ionicons name="information-circle-outline" size={24} color="#64748B" />
+              <Text style={hS.infoText}>
+                This simulation follows the official Hyrox sequence: 1km Run followed by each of the 8 stations.
+              </Text>
+            </View>
+
+            <TouchableOpacity onPress={startRace} style={hS.heroStartBtn}>
+              <LinearGradient colors={['#1E2340', '#4A5568']} style={hS.heroStartGrad}>
+                <Ionicons name="play" size={40} color="#fff" />
+                <Text style={hS.heroStartTitle}>START RACE SIMULATION</Text>
+                <Text style={hS.heroStartSub}>Timer will begin immediately</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <Text style={hS.sequenceLabel}>RACE PROTOCOL</Text>
+            {HYROX_RACE_SEQUENCE.map((s, i) => (
+              <View key={i} style={hS.sequenceItem}>
+                <View style={[hS.seqDot, { backgroundColor: s.type === 'run' ? '#4ECDC4' : '#F97316' }]} />
+                <Text style={hS.seqName}>{s.name}</Text>
+              </View>
+            ))}
+          </View>
+        )
       ) : (
         <View style={hS.drillContainer}>
           <Text style={hS.drillFocusLabel}>CURRENT FOCUS</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setSelectorOpen(!selectorOpen)}
             style={hS.stnSelector}
           >
@@ -688,8 +1344,8 @@ function HyroxTab() {
           {selectorOpen && (
             <View style={hS.selectorDropdown}>
               {HYROX_STATIONS.map(s => (
-                <TouchableOpacity 
-                  key={s.id} 
+                <TouchableOpacity
+                  key={s.id}
                   style={hS.selectorItem}
                   onPress={() => {
                     setSelectedStationId(s.id);
@@ -717,8 +1373,6 @@ function HyroxTab() {
               </View>
             </Section>
 
-            {/* Note: drill time field removed per user request */}
-
             <Section title="RESISTANCE" label="Weight">
               <View style={hS.drillInputBox}>
                 <TextInput
@@ -734,11 +1388,11 @@ function HyroxTab() {
             <Section title="RECOVERY" label="Rest">
               <View style={hS.restRow}>
                 {['30s', '60s', '90s', '2m'].map(r => (
-                  <TouchableOpacity 
-                    key={r} 
+                  <TouchableOpacity
+                    key={r}
                     onPress={() => setDrillRest(r)}
                     style={[
-                      hS.restPill, 
+                      hS.restPill,
                       drillRest === r && hS.restPillActive,
                       drillRest === r && r === '30s' && { backgroundColor: '#4ECDC4' },
                       drillRest === r && r === '60s' && { backgroundColor: '#FF8F7E' },
@@ -764,73 +1418,34 @@ function HyroxTab() {
           </View>
 
           <View style={hS.focusBanner}>
-             <LinearGradient
-               colors={['#1E2340', '#4A5568']}
-               style={hS.bannerImg}
-             >
-               <View style={hS.bannerContent}>
-                 <Text style={hS.bannerTop}>TRAINING FOCUS</Text>
-                 <Text style={hS.bannerTitle}>Scientific Precision.</Text>
-                 <Text style={hS.bannerSub}>REFINING THE 1% ADVANTAGE</Text>
-               </View>
-             </LinearGradient>
+            <LinearGradient
+              colors={['#1E2340', '#4A5568']}
+              style={hS.bannerImg}
+            >
+              <View style={hS.bannerContent}>
+                <Text style={hS.bannerTop}>TRAINING FOCUS</Text>
+                <Text style={hS.bannerTitle}>Scientific Precision.</Text>
+                <Text style={hS.bannerSub}>REFINING THE 1% ADVANTAGE</Text>
+              </View>
+            </LinearGradient>
           </View>
         </View>
       )}
 
-      {/* Summary Card & Notes - Only show for Race mode as requested */}
-      {mode === 'Race' && (
-        <>
-          <View style={[hS.summaryCard, SHADOWS.lg]}>
-            <Text style={hS.summaryLabel}>AGGREGATE TOTAL TIME</Text>
-            <TextInput
-              style={hS.aggregateTimeVal}
-              value={aggregateTime}
-              onChangeText={setAggregateTime}
-            />
-            
-            <Text style={hS.summaryLabel}>DIFFICULTY RPE</Text>
-            <View style={hS.starsRow}>
-              {[1,2,3,4,5].map(n => (
-                <TouchableOpacity key={n} onPress={() => setRpe(n)}>
-                  <Ionicons 
-                    name={n <= rpe ? 'star' : 'star-outline'} 
-                    size={24} 
-                    color={n <= rpe ? '#F97316' : '#475569'} 
-                    style={{ marginRight: 8 }}
-                  />
-                </TouchableOpacity>
-              ))}
-              <Text style={hS.tierText}>Tier: PRO-ELITE</Text>
-            </View>
-          </View>
-
-          <Text style={hS.notesLabel}>SESSION LABORATORY NOTES</Text>
-          <View style={[hS.notesContainer, SHADOWS.sm]}>
-            <TextInput
-              style={hS.notesInput}
-              multiline
-              placeholder="Record observations on nutrition, heart rate recovery, and transition times..."
-              placeholderTextColor="#94A3B8"
-              value={notes}
-              onChangeText={setNotes}
-            />
-          </View>
-        </>
+      {!raceActive && (
+        <TouchableOpacity onPress={save} activeOpacity={0.88} style={hS.logBtn}>
+          <LinearGradient
+            colors={['#E8705E', '#D96055']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={hS.logGrad}
+          >
+            <Ionicons name={saved ? 'checkmark-circle' : 'save-outline'} size={18} color="#fff" />
+            <Text style={hS.logBtnText}>
+              {saved ? 'Saved!' : (mode === 'Race' ? (raceFinished ? 'Save Race Results' : 'Log HYROX Session') : 'Save Drill')}
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
       )}
-
-      <TouchableOpacity onPress={save} activeOpacity={0.88} style={hS.logBtn}>
-        <LinearGradient
-          colors={['#E8705E', '#D96055']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-          style={hS.logGrad}
-        >
-          <Ionicons name={saved ? 'checkmark-circle' : 'save-outline'} size={18} color="#fff" />
-          <Text style={hS.logBtnText}>
-            {saved ? 'Saved!' : (mode === 'Race' ? 'Log HYROX Session' : 'Save Drill')}
-          </Text>
-        </LinearGradient>
-      </TouchableOpacity>
 
 
       {/* History Section */}
@@ -840,9 +1455,9 @@ function HyroxTab() {
       </View>
 
       <View style={hS.historySubtitleRow}>
-         <View style={[hS.historyTypePill, { backgroundColor: '#FDE6D2' }]}>
-            <Text style={[hS.historyTypePillText, { color: '#F97316' }]}>RACE SIMULATION</Text>
-         </View>
+        <View style={[hS.historyTypePill, { backgroundColor: '#FDE6D2' }]}>
+          <Text style={[hS.historyTypePillText, { color: '#F97316' }]}>RACE SIMULATION</Text>
+        </View>
       </View>
       {raceLogs.length === 0 ? (
         <Text style={hS.emptyHist}>No race simulations logged yet.</Text>
@@ -851,9 +1466,9 @@ function HyroxTab() {
       )}
 
       <View style={[hS.historySubtitleRow, { marginTop: 24 }]}>
-         <View style={[hS.historyTypePill, { backgroundColor: '#F1F5F9' }]}>
-            <Text style={[hS.historyTypePillText, { color: '#64748B' }]}>STATION DRILLS</Text>
-         </View>
+        <View style={[hS.historyTypePill, { backgroundColor: '#F1F5F9' }]}>
+          <Text style={[hS.historyTypePillText, { color: '#64748B' }]}>STATION DRILLS</Text>
+        </View>
       </View>
       {drillLogs.length === 0 ? (
         <Text style={hS.emptyHist}>No station drills logged yet.</Text>
@@ -871,87 +1486,87 @@ const hS = StyleSheet.create({
   headerSection: { marginBottom: 24, marginTop: 8 },
   pageHeader: { fontFamily: FONTS.black, fontSize: 32, color: '#1E2340', marginBottom: 8 },
   pageSubheader: { fontFamily: FONTS.regular, fontSize: 14, color: '#64748B', lineHeight: 20 },
-  
+
   selectionRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 32 },
-  selectCard: { 
-    width: '48%', backgroundColor: '#F8FAFC', borderRadius: 20, padding: 16, 
-    borderWidth: 2, borderColor: 'transparent' 
+  selectCard: {
+    width: '48%', backgroundColor: '#F8FAFC', borderRadius: 20, padding: 16,
+    borderWidth: 2, borderColor: 'transparent'
   },
   selectCardActive: { borderColor: '#FDE6D2', backgroundColor: '#fff' },
   selectIconRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   modeIconCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   selectTitle: { fontFamily: FONTS.black, fontSize: 16, color: '#1E2340', marginBottom: 4 },
   selectDesc: { fontFamily: FONTS.regular, fontSize: 12, color: '#64748B', lineHeight: 16 },
-  
+
   // Drill View Styles
   drillContainer: { marginBottom: 24 },
   drillFocusLabel: { fontFamily: FONTS.bold, fontSize: 10, color: '#94A3B8', letterSpacing: 1, marginBottom: 12 },
   stnSelector: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 18, 
+    backgroundColor: '#fff', borderRadius: 16, padding: 18,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 20,
     ...Platform.select({ web: { boxShadow: '0px 2px 12px rgba(0,0,0,0.04)' }, default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 } })
   },
   stnSelectorText: { fontFamily: FONTS.bold, fontSize: 17, color: '#1E2340' },
-  selectorDropdown: { 
+  selectorDropdown: {
     backgroundColor: '#fff', borderRadius: 16, padding: 8, marginBottom: 20,
     ...Platform.select({ web: { boxShadow: '0px 8px 24px rgba(0,0,0,0.1)' }, default: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 24, elevation: 8 } }),
     zIndex: 100,
   },
   selectorItem: { padding: 14, borderRadius: 10 },
   selectorItemText: { fontFamily: FONTS.medium, fontSize: 15, color: '#475569' },
-  
+
   drillForm: { backgroundColor: '#fff', borderRadius: 24, padding: 24, marginBottom: 24 },
   sectionContainer: { marginBottom: 32 },
   sectionTitle: { fontFamily: FONTS.bold, fontSize: 10, color: '#94A3B8', letterSpacing: 1.5, marginBottom: 12 },
-  sectionMain: { },
+  sectionMain: {},
   sectionLabel: { fontFamily: FONTS.black, fontSize: 32, color: '#1E2340', marginBottom: 16 },
-  
-  counterContainer: { 
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', 
-    borderRadius: 100, padding: 6, alignSelf: 'flex-start' 
+
+  counterContainer: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC',
+    borderRadius: 100, padding: 6, alignSelf: 'flex-start'
   },
-  counterBtn: { 
-    width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', 
+  counterBtn: {
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff',
     alignItems: 'center', justifyContent: 'center',
     ...Platform.select({ web: { boxShadow: '0px 2px 8px rgba(0,0,0,0.05)' }, default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 1 } })
   },
   counterValue: { fontFamily: FONTS.black, fontSize: 24, color: '#1E2340', marginHorizontal: 24 },
-  
+
   drillInputBox: { borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 8, flexDirection: 'row', alignItems: 'baseline' },
   drillMainInput: { flex: 1, fontFamily: FONTS.black, fontSize: 32, color: '#E2E8F0' }, // color matches placeholder shade in image
   drillInputUnit: { fontFamily: FONTS.bold, fontSize: 12, color: '#94A3B8' },
-  
+
   restRow: { flexDirection: 'row', gap: 10 },
-  restPill: { 
-    paddingHorizontal: 18, paddingVertical: 10, borderRadius: 100, 
-    backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' 
+  restPill: {
+    paddingHorizontal: 18, paddingVertical: 10, borderRadius: 100,
+    backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center'
   },
   restPillActive: { backgroundColor: '#1E2340' },
   restPillText: { fontFamily: FONTS.bold, fontSize: 13, color: '#475569' },
-  
+
   drillNotesLabel: { fontFamily: FONTS.bold, fontSize: 10, color: '#94A3B8', letterSpacing: 1.5, marginBottom: 12 },
   drillNotesBox: { backgroundColor: '#F8FAFC', borderRadius: 20, padding: 20, minHeight: 120 },
   drillNotesInput: { fontFamily: FONTS.medium, fontSize: 15, color: '#475569', lineHeight: 22 },
-  
+
   focusBanner: { borderRadius: 24, overflow: 'hidden', height: 160, marginBottom: 30 },
   bannerImg: { flex: 1, padding: 24, justifyContent: 'center' },
-  bannerContent: { },
+  bannerContent: {},
   bannerTop: { fontFamily: FONTS.bold, fontSize: 10, color: 'rgba(255,255,255,0.6)', letterSpacing: 2, marginBottom: 8 },
   bannerTitle: { fontFamily: FONTS.black, fontSize: 26, color: '#fff' },
   bannerSub: { fontFamily: FONTS.bold, fontSize: 11, color: '#94A3B8', letterSpacing: 1, marginTop: 4 },
 
-  stationCard: { 
-    backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 16, 
-    flexDirection: 'row', alignItems: 'center', marginBottom: 8 
+  stationCard: {
+    backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 16,
+    flexDirection: 'row', alignItems: 'center', marginBottom: 8
   },
-  stationAccent: { 
-    position: 'absolute', left: 0, top: 16, bottom: 16, width: 4, 
-    backgroundColor: '#E8705E', borderTopRightRadius: 4, borderBottomRightRadius: 4 
+  stationAccent: {
+    position: 'absolute', left: 0, top: 16, bottom: 16, width: 4,
+    backgroundColor: '#E8705E', borderTopRightRadius: 4, borderBottomRightRadius: 4
   },
-  stnBadge: { 
-    width: 48, height: 48, backgroundColor: '#F1F5F9', borderRadius: RADIUS.md, 
-    alignItems: 'center', justifyContent: 'center', marginRight: 16 
+  stnBadge: {
+    width: 48, height: 48, backgroundColor: '#F1F5F9', borderRadius: RADIUS.md,
+    alignItems: 'center', justifyContent: 'center', marginRight: 16
   },
   stnBadgePrefix: { fontFamily: FONTS.bold, fontSize: 9, color: '#94A3B8' },
   stnBadgeId: { fontFamily: FONTS.black, fontSize: 18, color: '#1E2340' },
@@ -959,10 +1574,10 @@ const hS = StyleSheet.create({
   stnName: { fontFamily: FONTS.black, fontSize: 16, color: '#1E2340' },
   stnTarget: { fontFamily: FONTS.bold, fontSize: 11, color: '#94A3B8', marginTop: 2 },
   stnInputs: { flexDirection: 'row', gap: 8 },
-  miniInput: { 
-    backgroundColor: '#F1F5F9', borderRadius: RADIUS.sm, paddingHorizontal: 12, 
-    paddingVertical: 10, minWidth: 70, textAlign: 'center', 
-    fontFamily: FONTS.bold, fontSize: 12, color: '#1E2340' 
+  miniInput: {
+    backgroundColor: '#F1F5F9', borderRadius: RADIUS.sm, paddingHorizontal: 12,
+    paddingVertical: 10, minWidth: 70, textAlign: 'center',
+    fontFamily: FONTS.bold, fontSize: 12, color: '#1E2340'
   },
 
   runDivider: { alignItems: 'center', paddingVertical: 12 },
@@ -988,10 +1603,10 @@ const hS = StyleSheet.create({
   historySubtitleRow: { marginBottom: 16 },
   historyTypePill: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   historyTypePillText: { fontFamily: FONTS.bold, fontSize: 10, letterSpacing: 0.5 },
-  
-  histCard: { 
-    backgroundColor: '#fff', borderRadius: 16, padding: 16, 
-    flexDirection: 'row', alignItems: 'center', marginBottom: 12, overflow: 'hidden' 
+
+  histCard: {
+    backgroundColor: '#fff', borderRadius: 16, padding: 16,
+    flexDirection: 'row', alignItems: 'center', marginBottom: 12, overflow: 'hidden'
   },
   histAccent: { width: 4, position: 'absolute', left: 0, top: 12, bottom: 12, borderRadius: 2 },
   histMain: { flex: 1, marginLeft: 8 },
@@ -1003,6 +1618,74 @@ const hS = StyleSheet.create({
   histTitle: { fontFamily: FONTS.medium, fontSize: 12, color: '#64748B' },
   emptyHist: { fontFamily: FONTS.regular, fontSize: 14, color: '#94A3B8', textAlign: 'center', paddingVertical: 12 },
   histStats: { fontFamily: FONTS.bold, fontSize: 13, color: '#94A3B8', marginBottom: 2 },
+
+  // New Race Simulation Styles
+  startRaceScreen: { marginBottom: 30 },
+  infoBox: {
+    flexDirection: 'row', backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16,
+    alignItems: 'center', marginBottom: 24
+  },
+  infoText: { flex: 1, fontFamily: FONTS.medium, fontSize: 13, color: '#64748B', marginLeft: 12, lineHeight: 18 },
+  heroStartBtn: { borderRadius: 24, overflow: 'hidden', marginBottom: 32 },
+  heroStartGrad: { padding: 32, alignItems: 'center', justifyContent: 'center' },
+  heroStartTitle: { fontFamily: FONTS.black, fontSize: 20, color: '#fff', marginTop: 12, letterSpacing: 0.5 },
+  heroStartSub: { fontFamily: FONTS.medium, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 4 },
+
+  sequenceLabel: { fontFamily: FONTS.bold, fontSize: 10, color: '#94A3B8', letterSpacing: 1.5, marginBottom: 16 },
+  sequenceItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  seqDot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
+  seqName: { fontFamily: FONTS.bold, fontSize: 14, color: '#475569' },
+
+  activeRaceContainer: { flex: 1 },
+  activeTimerCard: {
+    backgroundColor: '#1E2340', borderRadius: 24, padding: 24, alignItems: 'center', marginBottom: 24,
+    ...Platform.select({ web: { boxShadow: '0px 10px 20px rgba(0,0,0,0.1)' }, default: { elevation: 8, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20 } })
+  },
+  activeTimerLabel: { fontFamily: FONTS.bold, fontSize: 11, color: 'rgba(255,255,255,0.6)', letterSpacing: 1.5, marginBottom: 4 },
+  activeTimerVal: { fontFamily: FONTS.black, fontSize: 56, color: '#fff', letterSpacing: -1 },
+
+  currentSegmentCard: {
+    backgroundColor: '#fff', borderRadius: 24, padding: 24, marginBottom: 24,
+    borderWidth: 1, borderColor: '#F1F5F9', ...SHADOWS.sm
+  },
+  segmentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  segmentTypeBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  segmentTypeBtnText: { fontFamily: FONTS.black, fontSize: 10, color: '#fff' },
+  segmentStepText: { fontFamily: FONTS.bold, fontSize: 11, color: '#94A3B8' },
+  segmentName: { fontFamily: FONTS.black, fontSize: 28, color: '#1E2340', marginBottom: 24 },
+  completeBtn: { borderRadius: 16, overflow: 'hidden' },
+  completeGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18 },
+  completeBtnText: { fontFamily: FONTS.black, fontSize: 16, color: '#fff', letterSpacing: 0.5 },
+
+  splitsList: { flex: 1 },
+  splitsHeader: { fontFamily: FONTS.bold, fontSize: 11, color: '#94A3B8', letterSpacing: 1.5, marginBottom: 16 },
+  splitItem: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'
+  },
+  splitName: { fontFamily: FONTS.bold, fontSize: 14, color: '#475569' },
+  splitValue: { fontFamily: FONTS.black, fontSize: 14, color: '#1E2340' },
+  splitDivider: { width: 1, height: 12, backgroundColor: '#CBD5E1', marginHorizontal: 10 },
+  splitCumulative: { fontFamily: FONTS.medium, fontSize: 12, color: '#94A3B8' },
+
+  summaryContainer: { flex: 1 },
+  congratsCard: { alignItems: 'center', marginBottom: 32, marginTop: 12 },
+  congratsTitle: { fontFamily: FONTS.black, fontSize: 24, color: '#1E2340', marginBottom: 8 },
+  congratsTime: { fontFamily: FONTS.black, fontSize: 48, color: '#E8705E', letterSpacing: -1 },
+  congratsSub: { fontFamily: FONTS.bold, fontSize: 11, color: '#94A3B8', letterSpacing: 1.5 },
+
+  statsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap' },
+  statRowItem: { width: '31%', backgroundColor: '#F8FAFC', borderRadius: 16, padding: 12, alignItems: 'center' },
+  statRowLabel: { fontFamily: FONTS.bold, fontSize: 9, color: '#94A3B8', marginBottom: 4, textAlign: 'center' },
+  statRowVal: { fontFamily: FONTS.black, fontSize: 14, color: '#1E2340' },
+
+  analysisCard: {
+    flexDirection: 'row', backgroundColor: '#fff', borderRadius: 20, padding: 20,
+    justifyContent: 'space-between', marginBottom: 24, borderWidth: 1, borderColor: '#F1F5F9'
+  },
+  analysisItem: { flexDirection: 'row', alignItems: 'center', width: '48%' },
+  analysisLabel: { fontFamily: FONTS.bold, fontSize: 9, color: '#94A3B8', marginBottom: 2 },
+  analysisVal: { fontFamily: FONTS.bold, fontSize: 13, color: '#1E2340' },
 });
 
 
@@ -1038,7 +1721,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
 export default function WorkoutScreen({ navigation }) {
   const { user } = useAuthStore();
   const firstName = user?.name?.split(' ')[0] || 'Alex';
-  
+
   return (
     <SafeAreaView style={wS.container} edges={['top']}>
       {/* Screen header */}
@@ -1049,7 +1732,7 @@ export default function WorkoutScreen({ navigation }) {
         <Text style={wS.repLogo}>REPCRAFT</Text>
         <TouchableOpacity style={wS.avatarRing}>
           <View style={wS.avatar}>
-             <Text style={wS.avatarText}>{firstName[0].toUpperCase()}</Text>
+            <Text style={wS.avatarText}>{firstName[0].toUpperCase()}</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -1094,7 +1777,7 @@ const wS = StyleSheet.create({
   titleBanner: { paddingHorizontal: SPACING.lg, marginBottom: 20 },
   labText: { fontFamily: FONTS.bold, fontSize: 11, color: '#CD4C40', letterSpacing: 1.5, marginBottom: 6 },
   pageTitleText: { fontFamily: FONTS.black, fontSize: 38, color: COLORS.textDark, lineHeight: 42, letterSpacing: -1.5 },
-  
+
   customTabBarContainer: {
     flexDirection: 'row',
     backgroundColor: '#F5F6F8',
