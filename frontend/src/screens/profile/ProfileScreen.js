@@ -13,6 +13,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useWorkoutStore } from '../../store/workoutStore';
 import { useMetricsStore } from '../../store/metricsStore';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import StreakToaster from '../../components/common/StreakToaster';
 
 /* Badge definitions */
 const BADGE_DEFS = [
@@ -95,6 +96,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
+      <StreakToaster />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
         {/* ── Hero header ── */}
@@ -142,26 +144,28 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         {/* ── Streak card ── */}
-        <View style={[s.card, SHADOWS.card]}>
-          <View style={s.cardHeader}>
-            <View style={s.cardHeaderLeft}>
-              <Ionicons name="trophy-outline" size={20} color="#FFD700" />
-              <Text style={s.cardTitle}>Current Streak</Text>
-            </View>
-            <Text style={s.streakCount}>{user?.streak || 14} days</Text>
-          </View>
-
-          <View style={s.streakDots}>
-            {streakDots.map((active, i) => (
-              <View key={i} style={s.streakCol}>
-                <View style={[s.dot, active ? s.dotActive : s.dotInactive]}>
-                  {active && <Ionicons name="flame" size={11} color="#fff" />}
-                </View>
-                <Text style={s.dotDay}>{days[i]}</Text>
+        {user?.streak > 0 && (
+          <View style={[s.card, SHADOWS.card]}>
+            <View style={s.cardHeader}>
+              <View style={s.cardHeaderLeft}>
+                <Ionicons name="trophy-outline" size={20} color="#FFD700" />
+                <Text style={s.cardTitle}>Current Streak</Text>
               </View>
-            ))}
+              <Text style={s.streakCount}>{user?.streak} days</Text>
+            </View>
+
+            <View style={s.streakDots}>
+              {streakDots.map((active, i) => (
+                <View key={i} style={s.streakCol}>
+                  <View style={[s.dot, active ? s.dotActive : s.dotInactive]}>
+                    {active && <Ionicons name="flame" size={11} color="#fff" />}
+                  </View>
+                  <Text style={s.dotDay}>{days[i]}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* ── Badges ── */}
         <View style={[s.card, SHADOWS.card]}>

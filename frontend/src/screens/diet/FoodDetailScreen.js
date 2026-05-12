@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { addFoodEntry, getDateKey } from '../../store/nutritionStore';
+import { useAuthStore } from '../../store/authStore';
 
 export default function FoodDetailScreen({ navigation, route }) {
   const { food, mealType } = route.params;
@@ -43,6 +44,7 @@ export default function FoodDetailScreen({ navigation, route }) {
       image: food.image_front_small_url,
     };
     await addFoodEntry(getDateKey(), entry);
+    useAuthStore.getState().incrementStreak(); // Diet activity
     navigation.navigate('FoodDiary');
   };
 

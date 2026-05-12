@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useWorkoutStore } from '../../store/workoutStore';
+import { useAuthStore } from '../../store/authStore';
 import { EXERCISES, EXERCISE_CATEGORIES } from '../../constants/exercises';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
@@ -332,10 +333,15 @@ export function RoutineBuilderScreen({ route, navigation }) {
     }]);
   };
 
+  const { incrementStreak } = useAuthStore();
+
   const save = () => {
     const data = { title, day, muscleGroup, exercises };
     if (existing) updateRoutine(routineId, data);
-    else addRoutine(data);
+    else {
+      addRoutine(data);
+      incrementStreak(); // Increment streak for adding a new routine
+    }
     setSaved(true);
     setTimeout(() => { setSaved(false); navigation.goBack(); }, 900);
   };

@@ -29,7 +29,7 @@ function Ring({ size = 80, stroke = 8, pct = 0, color, backgroundColor = '#F0F0F
         strokeDasharray={`${circ} ${circ}`}
         strokeDashoffset={offset}
         strokeLinecap="round"
-        rotation="-90" origin={`${cx},${cx}`}
+        transform={`rotate(-90 ${cx} ${cx})`}
       />
     </Svg>
   );
@@ -150,7 +150,10 @@ export default function DietScreen() {
 
   const handleToggleSupp = async (id) => {
     const updated = await toggleSupplement(id);
-    if (updated) setSupplements(updated);
+    if (updated) {
+      setSupplements(updated);
+      useAuthStore.getState().incrementStreak();
+    }
   };
 
   const kcalLeft = targets.calories - log.totalCalories;

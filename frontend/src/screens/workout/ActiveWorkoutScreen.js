@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useWorkoutStore } from '../../store/workoutStore';
+import { useAuthStore } from '../../store/authStore';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { formatTime } from '../../utils/dateUtils';
 
@@ -171,6 +172,7 @@ const sr = StyleSheet.create({
 export default function ActiveWorkoutScreen({ route, navigation }) {
   const { routine } = route.params || {};
   const { startSession, finishSession, cancelSession } = useWorkoutStore();
+  const { incrementStreak } = useAuthStore();
 
   const [elapsed, setElapsed] = useState(0);
   const [expandedEx, setExpandedEx] = useState(routine?.exercises?.[0]?.id);
@@ -358,7 +360,12 @@ export default function ActiveWorkoutScreen({ route, navigation }) {
         title="Finish Workout?"
         message={`Time: ${formatTime(elapsed)}  ·  Effort: ${effort}/10\n\nThis will be saved to your history.`}
         confirmLabel="Save & Finish"
-        onConfirm={() => { setShowFinish(false); finishSession(effort); navigation.goBack(); }}
+        onConfirm={() => { 
+          setShowFinish(false); 
+          incrementStreak();
+          finishSession(effort); 
+          navigation.goBack(); 
+        }}
         onCancel={() => setShowFinish(false)}
       />
 

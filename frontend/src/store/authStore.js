@@ -6,8 +6,10 @@ import { MOCK_USER } from '../constants/mockData';
 export const useAuthStore = create(
   persist(
     (set, get) => ({
-      user: MOCK_USER,
+      user: { ...MOCK_USER, streak: 0 },
       isAuthenticated: false,
+      lastActivityDate: null,
+      showStreakAnimation: false,
       settings: {
         units: 'metric',
         notifications: {
@@ -22,6 +24,7 @@ export const useAuthStore = create(
         set({ 
           user: { 
             ...MOCK_USER, 
+            streak: 0, // Fresh user starts at 0
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: firebaseUser.displayName || 'User',
@@ -33,12 +36,36 @@ export const useAuthStore = create(
       },
 
       login: async (phoneNumber) => {
-        // This is now just a fallback or for state updates
-        const userData = { ...MOCK_USER, phoneNumber };
+        const userData = { ...MOCK_USER, streak: 0, phoneNumber };
         set({ user: userData, isAuthenticated: true });
+        // Trigger streak increment on login
+        get().incrementStreak();
         return { success: true };
       },
-      logout: () => set({ user: null, isAuthenticated: false }),
+
+      incrementStreak: () => {
+        const today = new Date().toISOString().split('T')[0];
+        const lastDate = get().lastActivityDate;
+        const currentUser = get().user;
+
+        if (lastDate !== today) {
+          const newStreak = (currentUser?.streak || 0) + 1;
+          set((state) => ({
+            user: { ...state.user, streak: newStreak },
+            lastActivityDate: today,
+            showStreakAnimation: true
+          }));
+          
+          // Auto-hide animation state after 3 seconds
+          setTimeout(() => {
+            set({ showStreakAnimation: false });
+          }, 3000);
+        }
+      },
+
+      dismissStreakAnimation: () => set({ showStreakAnimation: false }),
+
+      logout: () => set({ user: null, isAuthenticated: false, lastActivityDate: null }),
       updateProfile: (updates) => set((state) => ({ user: { ...state.user, ...updates } })),
       updateSettings: (newSettings) => set((state) => ({ 
         settings: { 

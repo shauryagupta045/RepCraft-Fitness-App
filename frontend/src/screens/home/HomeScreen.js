@@ -20,6 +20,7 @@ import {
   DietTargetsCard,
 } from '../../components/home/HomeCards';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import StreakToaster from '../../components/common/StreakToaster';
 
 // Staggered fade-in animation wrapper
 function AnimCard({ children, index }) {
@@ -108,6 +109,7 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <StreakToaster />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
@@ -146,21 +148,23 @@ export default function HomeScreen({ navigation }) {
         </AnimCard>
 
         {/* ── Streak Banner ── */}
-        <AnimCard index={1}>
-          <LinearGradient
-            colors={[COLORS.dark, '#252848']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.streakBanner}
-          >
-            <Ionicons name="trophy-outline" size={18} color="#FFD700" />
-            <Text style={styles.streakText}>
-              <Text style={styles.streakNum}>{user?.streak || 14}</Text>
-              {' '}day streak — keep it up!
-            </Text>
-            <Ionicons name="flame" size={18} color={COLORS.primary} />
-          </LinearGradient>
-        </AnimCard>
+        {user?.streak > 0 && (
+          <AnimCard index={1}>
+            <LinearGradient
+              colors={[COLORS.dark, '#252848']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.streakBanner}
+            >
+              <Ionicons name="trophy-outline" size={18} color="#FFD700" />
+              <Text style={styles.streakText}>
+                <Text style={styles.streakNum}>{user?.streak}</Text>
+                {' '}day streak — keep it up!
+              </Text>
+              <Ionicons name="flame" size={18} color={COLORS.primary} />
+            </LinearGradient>
+          </AnimCard>
+        )}
 
         {/* ── Readiness Card ── */}
         <AnimCard index={2}>

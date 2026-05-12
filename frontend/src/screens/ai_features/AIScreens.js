@@ -330,12 +330,15 @@ export function AIChatScreen({ navigation }) {
     metrics: todayMetrics,
   };
 
+  const { incrementStreak } = useAuthStore();
+
   const send = async (text) => {
     const msg = (text || input).trim();
     if (!msg || isGenerating) return;
     setInput('');
     addMessage({ role: 'user', text: msg });
     setGenerating(true);
+    incrementStreak(); // AI activity
 
     try {
       const msgs = [...getAPIMessages(), { role: 'user', content: msg }];

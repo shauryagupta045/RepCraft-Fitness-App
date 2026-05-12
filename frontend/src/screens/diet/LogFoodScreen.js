@@ -42,11 +42,20 @@ export default function LogFoodScreen({ route }) {
   const searchFood = async (q) => {
     setLoading(true);
     try {
-      const resp = await fetch(`${OFF_API_URL}${encodeURIComponent(q)}${OFF_API_SUFFIX}`);
+      const resp = await fetch(`${OFF_API_URL}${encodeURIComponent(q)}${OFF_API_SUFFIX}`, {
+        headers: {
+          'User-Agent': 'RepCraft2 - Android/iOS - Version 1.0 - https://github.com/repcraft',
+          'Accept': 'application/json',
+        }
+      });
+      if (!resp.ok) {
+        throw new Error(`API returned ${resp.status}`);
+      }
       const data = await resp.json();
       setResults(data.products || []);
     } catch (e) {
-      console.error(e);
+      console.error('Food search error:', e);
+      setResults([]);
     } finally {
       setLoading(false);
     }
