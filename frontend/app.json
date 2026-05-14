@@ -32,7 +32,13 @@
     },
     "plugins": [
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow RepCraft to use the camera for AI form tracking."
+        }
+      ]
     ],
     "newArchEnabled": true,
     "extra": {
