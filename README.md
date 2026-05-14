@@ -71,11 +71,6 @@ Since MediaPipe Pose requires WebAssembly/WebGL which are not natively available
    npx expo start
    ```
 
-## ⚠️ Important Notes for AI Form Tracker
-
-- **Permissions**: The app requires **Camera** and **Microphone** permissions. On Android, the browser engine requires microphone access to unlock the full `getUserMedia` API.
-- **Secure Origin**: Real-time AI requires a secure context. For development on real devices, use `localhost` (via ADB reverse) or `npx expo start --https`.
-- **Environment**: Performance is best on physical devices. Emulators may struggle with GPU-accelerated pose estimation.
 
 ## 📄 License
 This project is for educational and personal fitness tracking purposes.
