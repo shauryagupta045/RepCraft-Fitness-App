@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "501620225291",
+    "project_id": "repcraft-b70f5",
+    "storage_bucket": "repcraft-b70f5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:501620225291:android:2b37163f6ca83364de1e0e",
+        "android_client_info": {
+          "package_name": "com.repcraft.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "501620225291-aihqvkrtp8nes2dffa9sgimdmsi3jecs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1fhVSFwKsG3CCbVH4nx7UGmOMEIoaLAE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "501620225291-aihqvkrtp8nes2dffa9sgimdmsi3jecs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

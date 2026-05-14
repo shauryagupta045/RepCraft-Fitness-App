@@ -65,11 +65,12 @@ const SETTINGS = [
 ];
 
 export default function ProfileScreen({ navigation }) {
-  const { user, settings, logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { workoutLogs, cardioSessions, hyroxSessions } = useWorkoutStore();
   const metrics = useMetricsStore();
 
-  const isMetric = settings.units === 'metric';
+  const preferences = user?.preferences || { units: 'metric' };
+  const isMetric = preferences.units === 'metric';
   const weightUnit = isMetric ? 'kg' : 'lb';
   const heightUnit = isMetric ? 'cm' : 'in';
 

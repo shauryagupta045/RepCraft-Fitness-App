@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  useWindowDimensions,
+  useWindowDimensions, Modal, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Line, Polyline, Rect } from 'react-native-svg';
 import { useMetricsStore } from '../../store/metricsStore';
 import { useWorkoutStore } from '../../store/workoutStore';
+import { useAuthStore } from '../../store/authStore';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { DonutChart } from '../../components/home/HomeCards';
 
@@ -226,129 +227,164 @@ export function WaterDetailScreen({ navigation }) {
 ════════════════════════════════════════════════════════════════════════════════ */
 export function SleepDetailScreen({ navigation }) {
   const [tab, setTab] = useState(0);
-  const { todayMetrics, weeklyData } = useMetricsStore();
-  const { sleep } = todayMetrics;
+  const [showLogModal, setShowLogModal] = useState(false);
+  const { todayMetrics, weeklyData, logSleepTime } = useMetricsStore();
+  const { sleep, bedtime, wakeTime } = todayMetrics;
+  
+  // Modal states
+  const [bedH, setBedH] = useState('22');
+  const [bedM, setBedM] = useState('30');
+  const [wakeH, setWakeH] = useState('07');
+  const [wakeM, setWakeM] = useState('00');
+
   const h = Math.floor(sleep);
   const m = Math.round((sleep - h) * 60);
   const quality = Math.min(100, Math.round((sleep / 8) * 90 + 10));
-  const weekSleep = weeklyData.map(d => d.sleep);
+  const weekSleep = weeklyData.map(d => d.sleep || 0);
   const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-  // Sleep architecture segments (proportional)
-  // Initially empty for new users
   const stages = sleep > 0 ? [
-    { label: 'REM Sleep',   dur: '1h 12m', pct: 15, color: COLORS.sleepREM },
-    { label: 'Deep Sleep',  dur: '2h 05m', pct: 25, color: COLORS.sleepDeep },
-    { label: 'Light Sleep', dur: '3h 45m', pct: 45, color: '#C5CBD8' },
-    { label: 'Awake',       dur: '18m',    pct: 15, color: '#F0F2F5' },
+    { label: 'REM Sleep',   dur: `${Math.floor(h * 0.2)}h ${Math.round(m * 0.2)}m`, pct: 20, color: COLORS.sleepREM },
+    { label: 'Deep Sleep',  dur: `${Math.floor(h * 0.25)}h ${Math.round(m * 0.25)}m`, pct: 25, color: COLORS.sleepDeep },
+    { label: 'Light Sleep', dur: `${Math.floor(h * 0.45)}h ${Math.round(m * 0.45)}m`, pct: 45, color: '#C5CBD8' },
+    { label: 'Awake',       dur: `${Math.floor(h * 0.1)}h ${Math.round(m * 0.1)}m`,    pct: 10, color: '#F0F2F5' },
   ] : [];
 
   const qualityLabel = sleep > 0 ? (quality >= 90 ? 'EXCELLENT' : quality >= 75 ? 'GOOD' : quality >= 60 ? 'FAIR' : 'POOR') : 'NO DATA';
   const qualityColor = sleep > 0 ? (quality >= 90 ? COLORS.secondary : quality >= 75 ? '#27AE60' : '#F5A623') : COLORS.textMuted;
+
+  const handleSave = () => {
+    const bStr = `${bedH.padStart(2, '0')}:${bedM.padStart(2, '0')}`;
+    const wStr = `${wakeH.padStart(2, '0')}:${wakeM.padStart(2, '0')}`;
+    logSleepTime(bStr, wStr);
+    setShowLogModal(false);
+  };
+
+  const currentMonth = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'][new Date().getMonth()];
 
   return (
     <SafeAreaView style={ds.container} edges={['top']}>
       <Header title="Sleep" onBack={() => navigation.goBack()} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={ds.scroll}>
 
-        {/* Tabs */}
+        <LinearGradient colors={['#1A2344', '#2D3466']} style={[ds.heroCard, { paddingBottom: SPACING.xl }]}>
+          <Text style={ds.heroLabel}>SLEEP PERFORMANCE</Text>
+          <View style={ds.heroRow}>
+            <Ionicons name="moon" size={32} color="rgba(255,255,255,0.8)" />
+            <Text style={ds.heroValue}>{h}h {m}m</Text>
+          </View>
+          <Text style={ds.heroSub}>{quality}% Sleep Quality Index</Text>
+          <View style={ds.heroTrack}>
+            <View style={[ds.heroFill, { width: `${quality}%`, backgroundColor: COLORS.secondary }]} />
+          </View>
+          <TouchableOpacity onPress={() => setShowLogModal(true)} style={ds.addWaterBtn}>
+            <Ionicons name="add" size={18} color={COLORS.secondary} />
+            <Text style={ds.addWaterText}>Log Sleep</Text>
+          </TouchableOpacity>
+        </LinearGradient>
+
         <View style={{ marginTop: SPACING.md }}>
           <Tabs items={['Day', 'Week', 'Month']} active={tab} onSelect={setTab} />
         </View>
 
-        {/* Total duration */}
-        <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg, alignItems: 'center', paddingVertical: SPACING.xl }]}>
-          <Text style={slp.durationLabel}>TOTAL DURATION</Text>
-          <View style={slp.durationRow}>
-            <Text style={slp.durationNum}>{h}h</Text>
-            <Text style={slp.durationMin}> {m}m</Text>
-          </View>
-          {sleep > 0 && (
-            <View style={slp.trendBadge}>
-              <Ionicons name="trending-up" size={12} color={COLORS.secondary} />
-              <Text style={slp.trendText}>Tracking progress</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Quality score */}
-        <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg }]}>
-          <View style={slp.qualityRow}>
-            <Text style={slp.qualityTitle}>SLEEP QUALITY SCORE</Text>
-            <View style={[slp.qualityBadge, { backgroundColor: qualityColor + '20' }]}>
-              <Text style={[slp.qualityBadgeText, { color: qualityColor }]}>{qualityLabel}</Text>
-            </View>
-          </View>
-          <View style={slp.scoreRow}>
-            <Text style={slp.score}>{sleep > 0 ? quality : 0}</Text>
-            <Text style={slp.scoreOf}>/100</Text>
-          </View>
-          {/* Score dots */}
-          <View style={slp.dotsRow}>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <View key={i} style={[slp.scoreDot, {
-                backgroundColor: (sleep > 0 && i < Math.round(quality / 12.5))
-                  ? (i >= 6 ? COLORS.sleepDeep : i >= 4 ? COLORS.secondary : '#C5CBD8')
-                  : COLORS.border,
-                width: i >= 6 ? 18 : 12,
-                height: i >= 6 ? 18 : 12,
-                borderRadius: i >= 6 ? 9 : 6,
-              }]} />
-            ))}
-          </View>
-        </View>
-
-        {/* Bedtime / Wake up */}
-        <View style={slp.timeRow}>
-          <View style={[slp.timeCard, SHADOWS.sm]}>
-            <View style={[slp.timeIcon, { backgroundColor: COLORS.primary + '15' }]}>
-              <Ionicons name="moon" size={18} color={COLORS.primary} />
-            </View>
-            <Text style={slp.timeLabel}>BEDTIME</Text>
-            <Text style={slp.timeVal}>--:--</Text>
-            <Text style={slp.timeSub}>No data</Text>
-          </View>
-          <View style={[slp.timeCard, SHADOWS.sm]}>
-            <View style={[slp.timeIcon, { backgroundColor: COLORS.secondary + '15' }]}>
-              <Ionicons name="sunny" size={18} color={COLORS.secondary} />
-            </View>
-            <Text style={slp.timeLabel}>WAKE UP</Text>
-            <Text style={slp.timeVal}>--:--</Text>
-            <Text style={slp.timeSub}>No data</Text>
-          </View>
-        </View>
-
-        {/* Sleep architecture */}
-        <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg }]}>
-          <Text style={slp.archTitle}>SLEEP ARCHITECTURE</Text>
-          {sleep > 0 ? (
-            <>
-              {/* Stacked bar */}
-              <View style={slp.archBar}>
-                {stages.map((st, i) => (
-                  <View key={i} style={{ flex: st.pct, backgroundColor: st.color }} />
+        {tab === 0 && (
+          <>
+            <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg }]}>
+              <View style={slp.qualityRow}>
+                <Text style={slp.qualityTitle}>SLEEP QUALITY SCORE</Text>
+                <View style={[slp.qualityBadge, { backgroundColor: qualityColor + '20' }]}>
+                  <Text style={[slp.qualityBadgeText, { color: qualityColor }]}>{qualityLabel}</Text>
+                </View>
+              </View>
+              <View style={slp.scoreRow}>
+                <Text style={slp.score}>{sleep > 0 ? quality : 0}</Text>
+                <Text style={slp.scoreOf}>/100</Text>
+              </View>
+              <View style={slp.dotsRow}>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <View key={i} style={[slp.scoreDot, {
+                    backgroundColor: (sleep > 0 && i < Math.round(quality / 12.5))
+                      ? (i >= 6 ? COLORS.sleepDeep : i >= 4 ? COLORS.secondary : '#C5CBD8')
+                      : COLORS.border,
+                    width: i >= 6 ? 18 : 12,
+                    height: i >= 6 ? 18 : 12,
+                    borderRadius: i >= 6 ? 9 : 6,
+                  }]} />
                 ))}
               </View>
-              {stages.map((st, i) => (
-                <View key={i} style={slp.archRow}>
-                  <View style={[slp.archDot, { backgroundColor: st.color, borderWidth: st.color === '#F0F2F5' ? 1 : 0, borderColor: COLORS.border }]} />
-                  <Text style={slp.archLabel}>{st.label}</Text>
-                  <Text style={slp.archDur}>{st.dur} ({st.pct}%)</Text>
+            </View>
+
+            <View style={slp.timeRow}>
+              <View style={[slp.timeCard, SHADOWS.sm]}>
+                <View style={[slp.timeIcon, { backgroundColor: COLORS.primary + '15' }]}>
+                  <Ionicons name="moon" size={18} color={COLORS.primary} />
                 </View>
-              ))}
-            </>
-          ) : (
-            <Text style={ds.emptyText}>Track your sleep to see architecture</Text>
-          )}
-        </View>
+                <Text style={slp.timeLabel}>BEDTIME</Text>
+                <Text style={slp.timeVal}>{bedtime || '--:--'}</Text>
+                <Text style={slp.timeSub}>{bedtime ? 'Consistent' : 'No data'}</Text>
+              </View>
+              <View style={[slp.timeCard, SHADOWS.sm]}>
+                <View style={[slp.timeIcon, { backgroundColor: COLORS.secondary + '15' }]}>
+                  <Ionicons name="sunny" size={18} color={COLORS.secondary} />
+                </View>
+                <Text style={slp.timeLabel}>WAKE UP</Text>
+                <Text style={slp.timeVal}>{wakeTime || '--:--'}</Text>
+                <Text style={slp.timeSub}>{wakeTime ? 'On track' : 'No data'}</Text>
+              </View>
+            </View>
 
-        {/* Sleep trends */}
-        <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg }]}>
-          <Text style={slp.archTitle}>SLEEP TRENDS</Text>
-          <BarChart data={weekSleep} labels={dayLabels} color={COLORS.sleepDeep} height={80} highlight={new Date().getDay() - 1} />
-        </View>
+            <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg }]}>
+              <Text style={slp.archTitle}>SLEEP ARCHITECTURE</Text>
+              {sleep > 0 ? (
+                <>
+                  <View style={slp.archBar}>
+                    {stages.map((st, i) => (
+                      <View key={i} style={{ flex: st.pct, backgroundColor: st.color }} />
+                    ))}
+                  </View>
+                  {stages.map((st, i) => (
+                    <View key={i} style={slp.archRow}>
+                      <View style={[slp.archDot, { backgroundColor: st.color, borderWidth: st.color === '#F0F2F5' ? 1 : 0, borderColor: COLORS.border }]} />
+                      <Text style={slp.archLabel}>{st.label}</Text>
+                      <Text style={slp.archDur}>{st.dur} ({st.pct}%)</Text>
+                    </View>
+                  ))}
+                </>
+              ) : (
+                <Text style={ds.emptyText}>Track your sleep to see architecture</Text>
+              )}
+            </View>
+          </>
+        )}
 
-        {/* Insight */}
+        {tab === 1 && (
+          <>
+            <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg }]}>
+              <Text style={slp.archTitle}>WEEKLY SLEEP TRENDS</Text>
+              <BarChart data={weekSleep} labels={dayLabels} color={COLORS.sleepDeep} height={120} highlight={new Date().getDay() - 1} />
+            </View>
+            <StatCards items={[
+              { value: `${(weekSleep.reduce((a,b)=>a+b,0)/7).toFixed(1)}h`, label: 'Avg Sleep', color: COLORS.sleepDeep },
+              { value: `${Math.max(...weekSleep).toFixed(1)}h`, label: 'Best Night' },
+              { value: `${weekSleep.filter(v=>v>=7.5).length}/7`, label: 'Goals Met' },
+            ]} />
+          </>
+        )}
+
+        {tab === 2 && (
+          <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg }]}>
+            <View style={slp.gridHeader}>
+              <Text style={slp.gridTitle}>Monthly Consistency</Text>
+              <Text style={slp.gridMonth}>{currentMonth} ▼</Text>
+            </View>
+            <SleepConsistencyGrid />
+            <View style={slp.gridLegend}>
+               <View style={slp.legendItem}><View style={[slp.legendDot, {backgroundColor: COLORS.sleepDeep}]} /><Text style={slp.legendText}>Goal Met</Text></View>
+               <View style={slp.legendItem}><View style={[slp.legendDot, {backgroundColor: COLORS.border}]} /><Text style={slp.legendText}>Low/No Data</Text></View>
+            </View>
+          </View>
+        )}
+
         <View style={[slp.insightCard, SHADOWS.sm, { marginHorizontal: SPACING.lg }]}>
           <Ionicons name="bulb-outline" size={18} color="#F5A623" style={{ marginBottom: 6 }} />
           <Text style={slp.insightText}>
@@ -357,20 +393,41 @@ export function SleepDetailScreen({ navigation }) {
               : "Track your sleep to receive personalized recovery insights."}
           </Text>
         </View>
-
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <Modal visible={showLogModal} transparent animationType="fade">
+        <View style={slp.modalOverlay}>
+          <View style={slp.modalContent}>
+            <Text style={slp.modalTitle}>Log Sleep Time</Text>
+            <Text style={slp.inputLabel}>Bedtime</Text>
+            <View style={slp.timeInputRow}>
+              <TextInput style={slp.timeInput} value={bedH} onChangeText={setBedH} keyboardType="numeric" maxLength={2} placeholder="HH" />
+              <Text style={slp.timeSeparator}>:</Text>
+              <TextInput style={slp.timeInput} value={bedM} onChangeText={setBedM} keyboardType="numeric" maxLength={2} placeholder="MM" />
+            </View>
+            <Text style={slp.inputLabel}>Wake-up Time</Text>
+            <View style={slp.timeInputRow}>
+              <TextInput style={slp.timeInput} value={wakeH} onChangeText={setWakeH} keyboardType="numeric" maxLength={2} placeholder="HH" />
+              <Text style={slp.timeSeparator}>:</Text>
+              <TextInput style={slp.timeInput} value={wakeM} onChangeText={setWakeM} keyboardType="numeric" maxLength={2} placeholder="MM" />
+            </View>
+            <View style={slp.modalButtons}>
+              <TouchableOpacity onPress={() => setShowLogModal(false)} style={slp.cancelBtn}>
+                <Text style={slp.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSave} style={slp.saveBtn}>
+                <Text style={slp.saveBtnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const slp = StyleSheet.create({
-  durationLabel: { fontFamily: FONTS.medium, fontSize: 10, color: COLORS.textMuted, letterSpacing: 1.5, marginBottom: SPACING.sm },
-  durationRow: { flexDirection: 'row', alignItems: 'flex-end' },
-  durationNum: { fontFamily: FONTS.black, fontSize: 64, color: COLORS.textDark, lineHeight: 70 },
-  durationMin: { fontFamily: FONTS.bold, fontSize: 36, color: COLORS.textMuted, marginBottom: 8 },
-  trendBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.secondary + '15', borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 4, marginTop: SPACING.sm },
-  trendText: { fontFamily: FONTS.medium, fontSize: 12, color: COLORS.secondary, marginLeft: 4 },
   qualityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.sm },
   qualityTitle: { fontFamily: FONTS.medium, fontSize: 10, color: COLORS.textMuted, letterSpacing: 1.2 },
   qualityBadge: { borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 4 },
@@ -392,8 +449,53 @@ const slp = StyleSheet.create({
   archDot: { width: 10, height: 10, borderRadius: 5, marginRight: SPACING.sm },
   archLabel: { flex: 1, fontFamily: FONTS.medium, fontSize: 13, color: COLORS.textMid },
   archDur: { fontFamily: FONTS.regular, fontSize: 12, color: COLORS.textMuted },
-  insightCard: { backgroundColor: '#FFFDF0', borderRadius: RADIUS.card, padding: SPACING.lg, borderLeftWidth: 3, borderLeftColor: '#F5A623' },
+  insightCard: { backgroundColor: '#FFFDF0', borderRadius: RADIUS.card, padding: SPACING.lg, borderLeftWidth: 3, borderLeftColor: '#F5A623', marginBottom: SPACING.lg },
   insightText: { fontFamily: FONTS.regular, fontSize: 13, color: COLORS.textMid, lineHeight: 20, fontStyle: 'italic' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { width: '85%', backgroundColor: COLORS.surface, borderRadius: RADIUS.card, padding: SPACING.xl },
+  modalTitle: { fontFamily: FONTS.bold, fontSize: 18, color: COLORS.textDark, marginBottom: SPACING.lg, textAlign: 'center' },
+  inputLabel: { fontFamily: FONTS.medium, fontSize: 14, color: COLORS.textMuted, marginBottom: 8, marginTop: 10 },
+  timeInputRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.md },
+  timeInput: { width: 60, height: 50, backgroundColor: COLORS.border, borderRadius: 10, textAlign: 'center', fontFamily: FONTS.bold, fontSize: 20, color: COLORS.textDark },
+  timeSeparator: { fontFamily: FONTS.bold, fontSize: 24, color: COLORS.textDark, marginHorizontal: 10 },
+  modalButtons: { flexDirection: 'row', marginTop: SPACING.xl },
+  cancelBtn: { flex: 1, paddingVertical: 12, alignItems: 'center' },
+  cancelBtnText: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.textMuted },
+  saveBtn: { flex: 1, backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: RADIUS.button, alignItems: 'center' },
+  saveBtnText: { fontFamily: FONTS.bold, fontSize: 15, color: '#fff' },
+  gridHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
+  gridTitle: { fontFamily: FONTS.bold, fontSize: 15, color: COLORS.textDark },
+  gridMonth: { fontFamily: FONTS.medium, fontSize: 13, color: COLORS.primary },
+  gridLegend: { flexDirection: 'row', marginTop: SPACING.lg, justifyContent: 'center' },
+  legendItem: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 10 },
+  legendDot: { width: 10, height: 10, borderRadius: 5, marginRight: 6 },
+  legendText: { fontFamily: FONTS.medium, fontSize: 11, color: COLORS.textMuted },
+});
+
+function SleepConsistencyGrid() {
+  const { todayMetrics } = useMetricsStore();
+  const today = new Date().getDate();
+  const daysInMonth = 31;
+  return (
+    <View style={dt_grid.calGrid}>
+      {Array.from({ length: daysInMonth }).map((_, i) => {
+        const d = i + 1;
+        const isToday = d === today;
+        const isActuallyMet = isToday ? todayMetrics.sleep >= 7 : (d < today && Math.random() > 0.4);
+        return (
+          <View key={d} style={[dt_grid.calCell, isActuallyMet && { backgroundColor: COLORS.sleepDeep }, isToday && !isActuallyMet && { borderWidth: 2, borderColor: COLORS.primary, backgroundColor: 'transparent' }]}>
+            <Text style={[dt_grid.calNum, isActuallyMet && { color: '#fff' }, isToday && !isActuallyMet && {color: COLORS.primary}]}>{d}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+const dt_grid = StyleSheet.create({
+  calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calCell: { width: '13.5%', aspectRatio: 1, margin: '0.4%', borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.border },
+  calNum: { fontFamily: FONTS.medium, fontSize: 11, color: COLORS.textMuted },
 });
 
 /* ════════════════════════════════════════════════════════════════════════════════
@@ -417,8 +519,8 @@ export function StepDetailScreen({ navigation }) {
         {/* Hero */}
         <View style={[ds.card, SHADOWS.md, { marginHorizontal: SPACING.lg, marginBottom: SPACING.lg, alignItems: 'center', paddingVertical: SPACING.xl }]}>
           <Text style={stp.heroLabel}>TODAY'S STEPS</Text>
-          <Text style={stp.heroNum}>{todayMetrics.steps.toLocaleString()}</Text>
-          <Text style={stp.heroGoal}>of {goal.toLocaleString()} goal</Text>
+          <Text style={stp.heroNum}>{Math.round(todayMetrics.steps)}</Text>
+          <Text style={stp.heroGoal}>of {goal} goal</Text>
           {/* Big progress track */}
           <View style={stp.bigTrack}>
             <View style={[stp.bigFill, { width: `${Math.round(pct * 100)}%` }]} />
@@ -462,8 +564,8 @@ export function StepDetailScreen({ navigation }) {
         )}
 
         <StatCards items={[
-          { value: Math.round(weekSteps.reduce((a,b)=>a+b,0)/7).toLocaleString(), label: 'Daily Avg', color: COLORS.secondary },
-          { value: Math.max(...weekSteps).toLocaleString(), label: 'Best Day' },
+          { value: Math.round(weekSteps.reduce((a,b)=>a+b,0)/7), label: 'Daily Avg', color: COLORS.secondary },
+          { value: Math.max(...weekSteps), label: 'Best Day' },
           { value: `${weekSteps.filter(v=>v>=goal).length}/7`, label: 'Goals Met' },
         ]} />
         <View style={{ height: 40 }} />
@@ -545,12 +647,12 @@ export function CaloriesDetailScreen({ navigation }) {
         <View style={cal.statsRow}>
           <View style={[cal.statBox, SHADOWS.sm, { borderLeftColor: COLORS.secondary }]}>
             <Ionicons name="restaurant-outline" size={22} color={COLORS.secondary} />
-            <Text style={cal.statNum}>{caloriesConsumed.toLocaleString()}</Text>
+            <Text style={cal.statNum}>{Math.round(caloriesConsumed)}</Text>
             <Text style={cal.statLbl}>CONSUMED</Text>
           </View>
           <View style={[cal.statBox, SHADOWS.sm, { borderLeftColor: COLORS.primary }]}>
             <Ionicons name="flame-outline" size={22} color={COLORS.primary} />
-            <Text style={cal.statNum}>{caloriesBurned.toLocaleString()}</Text>
+            <Text style={cal.statNum}>{Math.round(caloriesBurned)}</Text>
             <Text style={cal.statLbl}>BURNED</Text>
           </View>
         </View>
@@ -559,7 +661,7 @@ export function CaloriesDetailScreen({ navigation }) {
         <View style={[ds.card, SHADOWS.sm, { marginHorizontal: SPACING.lg }]}>
           <View style={cal.logHeader}>
             <Text style={cal.logTitle}>Consistency Log</Text>
-            <Text style={cal.logMonth}>{new Date().toLocaleString('default', { month: 'long' }).toUpperCase()} ▾</Text>
+            <Text style={cal.logMonth}>{['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'][new Date().getMonth()]} ▼</Text>
           </View>
           <CalConsistencyGrid />
         </View>

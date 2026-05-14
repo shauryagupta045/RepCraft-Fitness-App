@@ -12,15 +12,16 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "scheme": "repcraft2",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.repcraft.app"
+      "bundleIdentifier": "com.shauryagupta.repcraft"
     },
     "android": {
+      "package": "com.shauryagupta.repcraft",
       "adaptiveIcon": {
         "backgroundColor": "#1E2340"
       },
-      "package": "com.repcraft.app",
       "googleServicesFile": "./google-services.json"
     },
     "web": {
@@ -29,11 +30,15 @@
       "output": "single",
       "jsEngine": "jsc"
     },
-    "scheme": "repcraft2",
     "plugins": [
       "expo-font",
       "expo-web-browser"
     ],
-    "newArchEnabled": true
+    "newArchEnabled": true,
+    "extra": {
+      "eas": {
+        "projectId": "6084d66c-ed35-4dc2-9d96-2bd168a77fc3"
+      }
+    }
   }
 }

@@ -62,7 +62,8 @@ export const SettingsMainScreen = ({ navigation }) => {
 
 // ─── Notifications Screen ───
 export const NotificationSettingsScreen = ({ navigation }) => {
-  const { settings, updateSettings } = useAuthStore();
+  const { user, updateSettings } = useAuthStore();
+  const settings = user?.preferences || {};
   const options = [
     { id: 'daily', label: 'Daily Reminders', sub: 'Receive prompts for tracking metrics' },
     { id: 'workouts', label: 'Workout Alerts', sub: 'Status on your planned routines' },
@@ -100,7 +101,8 @@ export const NotificationSettingsScreen = ({ navigation }) => {
 
 // ─── Units Screen ───
 export const UnitSettingsScreen = ({ navigation }) => {
-  const { settings, toggleUnits } = useAuthStore();
+  const { user, toggleUnits } = useAuthStore();
+  const settings = user?.preferences || {};
   const isMetric = settings.units === 'metric';
 
   return (

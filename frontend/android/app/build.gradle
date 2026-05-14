@@ -105,14 +105,16 @@ android {
             keyPassword 'android'
         }
     }
-    buildTypes {
+      buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // ✅ FIXED: removed signingConfig signingConfigs.debug
+            // EAS Build injects its own managed keystore for release builds.
+            // Do NOT set signingConfig here — let EAS handle it.
+            signingConfig null
+ 
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds
@@ -121,6 +123,7 @@ android {
             crunchPngs enablePngCrunchInRelease.toBoolean()
         }
     }
+ 
     packagingOptions {
         jniLibs {
             def enableLegacyPackaging = findProperty('expo.useLegacyPackaging') ?: 'false'

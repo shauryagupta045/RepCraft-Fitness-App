@@ -10,15 +10,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/authStore';
 import { COLORS, FONTS, RADIUS, SPACING, SHADOWS } from '../../constants/theme';
 import CountryPicker from '../../components/common/CountryPicker';
+import Toast from '../../components/common/Toast';
 import { auth } from '../../services/firebase';
-import { 
+import {
   signInWithPhoneNumber,
   PhoneAuthProvider,
   signInWithCredential,
   GoogleAuthProvider,
   OAuthProvider
 } from 'firebase/auth';
-import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+// ✅ REMOVED: import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri, ResponseType } from 'expo-auth-session';
@@ -35,8 +36,9 @@ export default function LoginScreen({ navigation }) {
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  const recaptchaVerifier = useRef(null);
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'error' });
+
+  // ✅ REMOVED: recaptchaVerifier ref (no longer needed)
 
   // Google Sign-In Setup
   const redirectUri = makeRedirectUri({
@@ -61,7 +63,6 @@ export default function LoginScreen({ navigation }) {
 
   React.useEffect(() => {
     if (response?.type === 'success') {
-      // The id_token is returned directly in params when using ResponseType.IdToken
       const idToken = response.params.id_token;
 
       if (!idToken) {
@@ -93,31 +94,17 @@ export default function LoginScreen({ navigation }) {
       setError('Google Web Client ID is missing in .env');
       return;
     }
-    console.log('Starting Google Login with Redirect URI:', redirectUri);
     promptAsync();
   };
 
   const handleSendOtp = async () => {
-    if (!phoneNumber.trim() || phoneNumber.length < 10) {
-      setError('Please enter a valid phone number.');
-      return;
-    }
-    
-    setLoading(true);
-    setError('');
-    
-    try {
-      const fullPhone = `${country.code}${phoneNumber}`;
-      const confirmation = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifier.current);
-      setConfirmationResult(confirmation);
-      Alert.alert('Success', 'OTP sent to your phone!');
-    } catch (err) {
-      console.error('Send OTP Error:', err);
-      setError(err.message || 'Failed to send OTP. Try again.');
-      Alert.alert('Error', err.message);
-    } finally {
-      setLoading(false);
-    }
+    // Phone auth is discontinued — show message and return
+    setToast({
+      visible: true,
+      message: 'Due to technical problems, phone authentication is discontinued. Please use Google Login.',
+      type: 'error'
+    });
+    return;
   };
 
   const handleVerifyOtp = async () => {
@@ -125,10 +112,8 @@ export default function LoginScreen({ navigation }) {
       setError('Please enter the 6-digit OTP.');
       return;
     }
-    
     setLoading(true);
     setError('');
-    
     try {
       const result = await confirmationResult.confirm(otp);
       await setUser(result.user);
@@ -141,7 +126,6 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
-
   const handleSocialLogin = (provider) => {
     if (provider === 'Google') {
       handleGoogleLogin();
@@ -153,11 +137,7 @@ export default function LoginScreen({ navigation }) {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaVerifier}
-        firebaseConfig={auth.app.options}
-        attemptInvisibleRetries={3}
-      />
+      {/* ✅ REMOVED: <FirebaseRecaptchaVerifierModal> component */}
 
       <ScrollView
         style={s.scroll}
@@ -194,9 +174,9 @@ export default function LoginScreen({ navigation }) {
             <>
               <Text style={s.label}>Phone Number</Text>
               <View style={s.phoneInputRow}>
-                <CountryPicker 
-                  selectedCountry={country} 
-                  onSelect={setCountry} 
+                <CountryPicker
+                  selectedCountry={country}
+                  onSelect={setCountry}
                 />
                 <View style={s.inputWrap}>
                   <TextInput
@@ -234,10 +214,9 @@ export default function LoginScreen({ navigation }) {
 
           {error ? <Text style={s.errorText}>{error}</Text> : null}
 
-          {/* Login CTA */}
-          <TouchableOpacity 
-            onPress={confirmationResult ? handleVerifyOtp : handleSendOtp} 
-            activeOpacity={0.88} 
+          <TouchableOpacity
+            onPress={confirmationResult ? handleVerifyOtp : handleSendOtp}
+            activeOpacity={0.88}
             style={s.cta}
             disabled={loading}
           >
@@ -265,7 +244,11 @@ export default function LoginScreen({ navigation }) {
                 <View style={s.divLine} />
               </View>
 
-              <TouchableOpacity style={[s.socialBtn, SHADOWS.card, { marginBottom: SPACING.xl }]} onPress={() => handleSocialLogin('Google')} disabled={loading}>
+              <TouchableOpacity
+                style={[s.socialBtn, SHADOWS.card, { marginBottom: SPACING.xl }]}
+                onPress={() => handleSocialLogin('Google')}
+                disabled={loading}
+              >
                 <Ionicons name="logo-google" size={18} color={COLORS.textDark} />
                 <Text style={s.socialText}>Continue with Google</Text>
               </TouchableOpacity>
@@ -280,6 +263,12 @@ export default function LoginScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast(prev => ({ ...prev, visible: false }))}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -307,40 +296,20 @@ const s = StyleSheet.create({
   },
   heading: { fontFamily: FONTS.black, fontSize: 26, color: COLORS.textDark, marginBottom: 4 },
   sub: { fontFamily: FONTS.regular, fontSize: 14, color: COLORS.textMuted, marginBottom: SPACING.xl },
-  label: {
-    fontFamily: FONTS.medium,
-    fontSize: 13,
-    color: COLORS.textDark,
-    marginBottom: 6,
-  },
-  phoneInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
+  label: { fontFamily: FONTS.medium, fontSize: 13, color: COLORS.textDark, marginBottom: 6 },
+  phoneInputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md },
   inputWrap: {
-    flex: 1,
-    flexDirection: 'row', alignItems: 'center',
+    flex: 1, flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.surface, borderRadius: RADIUS.input,
     borderWidth: 1.5, borderColor: COLORS.border,
-    paddingHorizontal: SPACING.md,
-    ...SHADOWS.card,
+    paddingHorizontal: SPACING.md, ...SHADOWS.card,
   },
   inputIcon: { marginRight: SPACING.sm },
-  input: {
-    flex: 1, fontFamily: FONTS.regular, fontSize: 15,
-    color: COLORS.textDark, paddingVertical: 14,
-  },
+  input: { flex: 1, fontFamily: FONTS.regular, fontSize: 15, color: COLORS.textDark, paddingVertical: 14 },
   resendText: { fontFamily: FONTS.medium, fontSize: 13, color: COLORS.primary, marginBottom: SPACING.xl, textAlign: 'right' },
-  errorText: {
-    fontFamily: FONTS.regular, fontSize: 13, color: COLORS.danger,
-    marginTop: -6, marginBottom: SPACING.sm, marginLeft: 2,
-  },
+  errorText: { fontFamily: FONTS.regular, fontSize: 13, color: COLORS.danger, marginTop: -6, marginBottom: SPACING.sm, marginLeft: 2 },
   cta: { borderRadius: RADIUS.button, overflow: 'hidden', marginBottom: SPACING.xl },
-  ctaGrad: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 16,
-  },
+  ctaGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16 },
   ctaText: { fontFamily: FONTS.bold, fontSize: 16, color: '#fff', marginRight: 8 },
   divRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.xl },
   divLine: { flex: 1, height: 1, backgroundColor: COLORS.border },

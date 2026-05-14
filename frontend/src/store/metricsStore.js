@@ -19,6 +19,8 @@ const DEFAULT_METRICS = {
   caloriesConsumed: 0,
   water: 0,
   sleep: 0,
+  bedtime: '',
+  wakeTime: '',
   activeMinutes: 0,
   readinessScore: 0,
   fatigue: 0,
@@ -27,7 +29,11 @@ const DEFAULT_METRICS = {
 
 const DEFAULT_CHART_DATA = Array.from({ length: 7 }, (_, i) => ({
   day: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][i],
-  value: 0,
+  steps: 0,
+  water: 0,
+  sleep: 0,
+  caloriesBurned: 0,
+  caloriesConsumed: 0,
 }));
 
 export const useMetricsStore = create(
@@ -54,6 +60,8 @@ export const useMetricsStore = create(
               steps: data.stepCount ?? 0,
               water: data.waterIntakeMl ? data.waterIntakeMl / 1000 : 0, // ml → L
               sleep: data.sleepHours ?? 0,
+              bedtime: data.bedtime ?? '',
+              wakeTime: data.wakeTime ?? '',
               readinessScore: data.readinessScore ?? 0,
             },
           });
@@ -99,8 +107,71 @@ export const useMetricsStore = create(
 
       logSleep: (hours) =>
         set((state) => {
-          fbWrite(state._uid, { sleepHours: hours });
-          return { todayMetrics: { ...state.todayMetrics, sleep: hours } };
+          const today = new Date().getDay();
+          const index = today === 0 ? 6 : today - 1;
+          const newWeekly = [...state.weeklyData];
+          newWeekly[index] = { ...newWeekly[index], sleep: hours };
+          
+          const newMetrics = { ...state.todayMetrics, sleep: hours };
+          // Re-calculate readiness
+          const { fatigue, didWorkout } = newMetrics;
+          const readinessScore = Math.min(
+            100,
+            Math.round((hours / 8) * 40 + ((6 - fatigue) / 5) * 35 + (didWorkout ? 25 : 0))
+          );
+          newMetrics.readinessScore = readinessScore;
+
+          fbWrite(state._uid, { 
+            sleepHours: hours,
+            readinessScore 
+          });
+          
+          return { 
+            todayMetrics: newMetrics,
+            weeklyData: newWeekly
+          };
+        }),
+
+      logSleepTime: (bedtime, wakeTime) =>
+        set((state) => {
+          const [bh, bm] = bedtime.split(':').map(Number);
+          const [wh, wm] = wakeTime.split(':').map(Number);
+          
+          let duration = wh + wm/60 - (bh + bm/60);
+          if (duration < 0) duration += 24;
+          duration = +duration.toFixed(2);
+          
+          const today = new Date().getDay();
+          const index = today === 0 ? 6 : today - 1;
+          const newWeekly = [...state.weeklyData];
+          newWeekly[index] = { ...newWeekly[index], sleep: duration };
+
+          const newMetrics = { 
+            ...state.todayMetrics, 
+            sleep: duration,
+            bedtime,
+            wakeTime
+          };
+
+          // Re-calculate readiness
+          const { fatigue, didWorkout } = newMetrics;
+          const readinessScore = Math.min(
+            100,
+            Math.round((duration / 8) * 40 + ((6 - fatigue) / 5) * 35 + (didWorkout ? 25 : 0))
+          );
+          newMetrics.readinessScore = readinessScore;
+
+          fbWrite(state._uid, { 
+            sleepHours: duration,
+            bedtime,
+            wakeTime,
+            readinessScore
+          });
+
+          return {
+            todayMetrics: newMetrics,
+            weeklyData: newWeekly
+          };
         }),
 
       logSteps: (steps) =>

@@ -90,6 +90,7 @@ export const useAuthStore = create(
             name: firebaseUser.displayName || 'User',
             photoURL: firebaseUser.photoURL,
             profile: { ...DEFAULT_USER.profile },
+            preferences: { ...DEFAULT_USER.preferences },
             streak: 0,
           };
 
@@ -99,7 +100,13 @@ export const useAuthStore = create(
               console.log('[authStore] Initializing new user data in Firestore...');
               await initializeUserData(firebaseUser.uid, firebaseUser.displayName || '');
             }
-            const profile = await getUserProfile(firebaseUser.uid);
+            
+            // Fetch Profile and Stats in parallel
+            const [profile, stats] = await Promise.all([
+              getUserProfile(firebaseUser.uid),
+              require('../services/userService').getStats(firebaseUser.uid)
+            ]);
+
             if (profile) {
               userData.profile = {
                 height: profile.height || 0,
@@ -110,10 +117,18 @@ export const useAuthStore = create(
                 goal: profile.goal || '',
               };
               userData.name = profile.displayName || userData.name;
-              userData.streak = profile.streak || 0;
+              userData.preferences = {
+                ...userData.preferences,
+                ...(profile.preferences || {}),
+              };
+            }
+
+            if (stats) {
+              userData.streak = stats.streak || 0;
+              set({ lastActivityDate: stats.lastActivityDate || null });
             }
           } catch (firestoreError) {
-            console.error('[authStore] Firestore profile fetch failed:', firestoreError.message);
+            console.error('[authStore] Firestore data fetch failed:', firestoreError.message);
           }
 
           // Populate all other stores from Firebase (BLOCKING to ensure data consistency)
@@ -150,6 +165,7 @@ export const useAuthStore = create(
               weight: userData.weight || 0,
               activityLevel: userData.experience || '',
             },
+            preferences: { ...DEFAULT_USER.preferences },
             streak: 0,
           },
           isAuthenticated: true,
@@ -240,6 +256,60 @@ export const useAuthStore = create(
 
       setLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
+
+      // ─── settings ─────────────────────────────────────────────────────────
+      updateSettings: async (updates) => {
+        const { user } = get();
+        if (!user) return;
+        const newPrefs = { ...user.preferences, ...updates };
+        set((state) => ({
+          user: { ...state.user, preferences: newPrefs }
+        }));
+        // Persist to Firebase (optional, but good practice)
+        try {
+          await updateUserProfile(user.uid, { preferences: newPrefs });
+        } catch (e) {
+          console.warn('[authStore] Failed to persist settings:', e.message);
+        }
+      },
+
+      toggleUnits: async () => {
+        const { user } = get();
+        if (!user) return;
+        const currentUnits = user.preferences?.units || 'metric';
+        const newUnits = currentUnits === 'metric' ? 'imperial' : 'metric';
+        
+        // Basic conversion logic for profile values if needed
+        let { height, weight } = user.profile;
+        if (newUnits === 'imperial') {
+          // metric -> imperial
+          height = Math.round(height / 2.54); // cm -> in
+          weight = Math.round(weight * 2.20462); // kg -> lb
+        } else {
+          // imperial -> metric
+          height = Math.round(height * 2.54); // in -> cm
+          weight = Math.round(weight / 2.20462); // lb -> kg
+        }
+
+        const newPrefs = { ...user.preferences, units: newUnits };
+        set((state) => ({
+          user: { 
+            ...state.user, 
+            preferences: newPrefs,
+            profile: { ...state.user.profile, height, weight }
+          }
+        }));
+
+        try {
+          await updateUserProfile(user.uid, { 
+            preferences: newPrefs,
+            height,
+            weight
+          });
+        } catch (e) {
+          console.warn('[authStore] Failed to persist unit toggle:', e.message);
+        }
+      },
     }),
     {
       name: 'auth-storage',

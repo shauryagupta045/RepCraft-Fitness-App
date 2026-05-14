@@ -547,6 +547,12 @@ export function SleepCard({ onPress, weekData = [] }) {
         <Text style={hwStyles.value}>{h}h {m}m</Text>
       </View>
 
+      {(todayMetrics.bedtime || todayMetrics.wakeTime) && (
+        <Text style={hwStyles.timeRange}>
+          {todayMetrics.bedtime || '--:--'} - {todayMetrics.wakeTime || '--:--'}
+        </Text>
+      )}
+
       <View style={{ marginTop: SPACING.md, flex: 1, justifyContent: 'flex-end' }}>
         <MiniBarChart data={safeWeek} color={GREEN} maxHeight={44} barWidth={13} hideLabels={true} />
       </View>
@@ -598,6 +604,12 @@ const hwStyles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: 13,
     color: COLORS.textMuted,
+  },
+  timeRange: {
+    fontFamily: FONTS.medium,
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: -2,
   },
   footerLabel: {
     fontFamily: FONTS.regular,

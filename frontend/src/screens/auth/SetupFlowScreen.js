@@ -72,11 +72,12 @@ export default function SetupFlowScreen({ navigation }) {
     scrollRef.current?.scrollTo({ x: nextSlide * width, animated: true });
   };
 
-  const skip = () => {
+  const skip = async () => {
     if (!user?.uid) {
       login({ name: 'Guest User', email: 'guest@repcraft.app', goal: 'muscle' });
     } else {
-      // If already logged in, just go home
+      // If already logged in, set a default goal to mark setup as complete
+      await updateProfile({ goal: 'muscle' });
     }
   };
 
